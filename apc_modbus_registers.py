@@ -1,9 +1,11 @@
 """Shared register definitions for the APC UPS Modbus integration.
 
 Based on 990-5702A-EN (Smart-UPS excluding SMT/SMX/SURTD/SRT).
+Addresses are Modbus wire addresses (register number - 40000 for holding registers).
 """
 
 REGISTERS = [
+    # Status Words
     {
         "key": "status_word_0",
         "address": 0x0000,
@@ -32,6 +34,14 @@ REGISTERS = [
         "type": "uint16",
         "scale": 1,
     },
+    # Line Quality & Battery
+    {
+        "key": "line_quality",
+        "address": 0x0004,
+        "count": 1,
+        "type": "uint16",
+        "scale": 1,
+    },
     {
         "key": "battery_state_of_charge",
         "address": 0x0005,
@@ -53,6 +63,14 @@ REGISTERS = [
         "type": "uint16",
         "scale": 1,
     },
+    # Temperature & Load
+    {
+        "key": "ups_internal_temperature",
+        "address": 0x0008,
+        "count": 1,
+        "type": "uint16",
+        "scale": 1,
+    },
     {
         "key": "load_amps",
         "address": 0x0009,
@@ -60,6 +78,28 @@ REGISTERS = [
         "type": "uint16",
         "scale": 1,
     },
+    {
+        "key": "bad_battery_packs",
+        "address": 0x000A,
+        "count": 1,
+        "type": "uint16",
+        "scale": 1,
+    },
+    {
+        "key": "total_battery_packs",
+        "address": 0x000B,
+        "count": 1,
+        "type": "uint16",
+        "scale": 1,
+    },
+    {
+        "key": "load_percent",
+        "address": 0x000C,
+        "count": 1,
+        "type": "uint16",
+        "scale": 1,
+    },
+    # Output Voltage
     {
         "key": "nominal_output_voltage",
         "address": 0x000D,
@@ -74,6 +114,7 @@ REGISTERS = [
         "type": "uint16",
         "scale": 1,
     },
+    # Input Voltage & Frequency
     {
         "key": "max_input_voltage",
         "address": 0x000F,
@@ -102,9 +143,60 @@ REGISTERS = [
         "type": "uint16",
         "scale": 1,
     },
+    # Environmental Probes (discontinued Measure-UPS)
+    {
+        "key": "measure_ups_temp_probe1",
+        "address": 0x0013,
+        "count": 1,
+        "type": "uint16",
+        "scale": 1,
+    },
+    {
+        "key": "measure_ups_humidity_probe1",
+        "address": 0x0014,
+        "count": 1,
+        "type": "uint16",
+        "scale": 1,
+    },
+    {
+        "key": "measure_ups_temp_probe2",
+        "address": 0x0015,
+        "count": 1,
+        "type": "uint16",
+        "scale": 1,
+    },
+    {
+        "key": "measure_ups_humidity_probe2",
+        "address": 0x0016,
+        "count": 1,
+        "type": "uint16",
+        "scale": 1,
+    },
+    {
+        "key": "measure_ups_contact_position",
+        "address": 0x0017,
+        "count": 1,
+        "type": "uint16",
+        "scale": 1,
+    },
+    # Battery Configuration
     {
         "key": "minimum_return_battery_capacity",
         "address": 0x001A,
+        "count": 1,
+        "type": "uint16",
+        "scale": 1,
+    },
+    {
+        "key": "lower_transfer_point",
+        "address": 0x001B,
+        "count": 1,
+        "type": "uint16",
+        "scale": 1,
+    },
+    {
+        "key": "upper_transfer_point",
+        "address": 0x001C,
         "count": 1,
         "type": "uint16",
         "scale": 1,
@@ -117,6 +209,13 @@ REGISTERS = [
         "scale": 1,
     },
     {
+        "key": "shutdown_delay",
+        "address": 0x001E,
+        "count": 1,
+        "type": "uint16",
+        "scale": 1,
+    },
+    {
         "key": "low_battery_duration",
         "address": 0x001F,
         "count": 1,
@@ -124,18 +223,26 @@ REGISTERS = [
         "scale": 1,
     },
     {
+        "key": "turn_on_delay",
+        "address": 0x0020,
+        "count": 1,
+        "type": "uint16",
+        "scale": 1,
+    },
+    {
+        "key": "sensitivity",
+        "address": 0x0021,
+        "count": 1,
+        "type": "uint16",
+        "scale": 1,
+    },
+    # UPS Identification
+    {
         "key": "ups_id",
         "address": 0x0022,
         "count": 8,
         "type": "ascii",
         "scale": 1,
         "ascii_width": 1,
-    },
-    {
-        "key": "battery_current",
-        "address": 0x004D,
-        "count": 1,
-        "type": "int16",
-        "scale": 1,
     },
 ]

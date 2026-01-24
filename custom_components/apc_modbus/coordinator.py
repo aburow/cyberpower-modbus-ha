@@ -37,23 +37,44 @@ class APCModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from the UPS via Modbus."""
         data: dict[str, Any] = {}
+        errors: list[str] = []
 
         for descriptor in REGISTERS:
-            read_request = functools.partial(
-                self.client.read_holding_registers,
-                descriptor["address"],
-                count=descriptor["count"],
-                device_id=self.unit,
-            )
-            result = await self.hass.async_add_executor_job(read_request)
-            if result.isError():
-                raise UpdateFailed(
-                    f"Modbus read failure for {descriptor['key']}"
+            try:
+                read_request = functools.partial(
+                    self.client.read_holding_registers,
+                    descriptor["address"],
+                    count=descriptor["count"],
+                    device_id=self.unit,
+                )
+                result = await self.hass.async_add_executor_job(read_request)
+                if result.isError():
+                    errors.append(descriptor["key"])
+                    _LOGGER.debug(
+                        "Failed to read register %s (address 0x%04X): %s",
+                        descriptor["key"],
+                        descriptor["address"],
+                        result,
+                    )
+                    continue
+
+                value = self._decode_register(result.registers, descriptor)
+                if value is not None:
+                    data[descriptor["key"]] = value
+            except Exception as err:
+                errors.append(descriptor["key"])
+                _LOGGER.debug(
+                    "Exception reading register %s (address 0x%04X): %s",
+                    descriptor["key"],
+                    descriptor["address"],
+                    err,
                 )
 
-            value = self._decode_register(result.registers, descriptor)
-            if value is not None:
-                data[descriptor["key"]] = value
+        if not data:
+            raise UpdateFailed(f"Unable to read any registers: {', '.join(errors)}")
+
+        if errors:
+            _LOGGER.debug("Failed to read %d registers: %s", len(errors), ", ".join(errors))
 
         return data
 

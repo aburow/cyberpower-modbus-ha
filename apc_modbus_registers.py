@@ -93,3 +93,52 @@ REGISTERS = [
         "scale": 64,
     },
 ]
+
+# Identification strings
+REGISTERS.extend([
+    {
+        "key": "firmware_version",
+        "address": 0x0204,
+        "count": 8,
+        "type": "ascii",
+        "scale": 1,
+    },
+    {
+        "key": "model_name",
+        "address": 0x0214,
+        "count": 16,
+        "type": "ascii",
+        "scale": 1,
+    },
+    {
+        "key": "sku_name",
+        "address": 0x0224,
+        "count": 16,
+        "type": "ascii",
+        "scale": 1,
+    },
+    {
+        "key": "serial_number",
+        "address": 0x0234,
+        "count": 8,
+        "type": "ascii",
+        "scale": 1,
+    },
+])
+
+REGISTERS.extend([
+    {
+        "key": "battery_install_date",
+        "address": 0x0253,
+        "count": 1,
+        "type": "uint16",
+        "scale": 1,
+    },
+    {
+        "key": "ups_name",
+        "address": 0x0254,
+        "count": 8,
+        "type": "ascii",
+        "scale": 1,
+    },
+])

@@ -25,6 +25,12 @@ def decode_register(registers: list[int], descriptor: dict[str, Any]) -> float |
         raw = (registers[0] << 16) | registers[1]
         if dtype == "int32" and raw >= 0x80000000:
             raw -= 0x100000000
+    elif dtype == "ascii" and registers:
+        chars: list[str] = []
+        for reg in registers:
+            chars.append(chr((reg >> 8) & 0xFF))
+            chars.append(chr(reg & 0xFF))
+        return "".join(chars).rstrip()
     else:
         return None
 

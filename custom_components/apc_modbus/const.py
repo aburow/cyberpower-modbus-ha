@@ -73,6 +73,43 @@ SENSOR_DESCRIPTIONS = [
         state_class=STATE_CLASS_MEASUREMENT,
         register_key="output_voltage_phase_1",
     ),
+    APCModbusSensorDescription(
+        key="firmware_version",
+        name="Firmware Version",
+        register_key="firmware_version",
+        state_class=None,
+    ),
+    APCModbusSensorDescription(
+        key="model_name",
+        name="Model Name",
+        register_key="model_name",
+        state_class=None,
+    ),
+    APCModbusSensorDescription(
+        key="sku_name",
+        name="SKU",
+        register_key="sku_name",
+        state_class=None,
+    ),
+    APCModbusSensorDescription(
+        key="serial_number",
+        name="Serial Number",
+        register_key="serial_number",
+        state_class=None,
+    ),
+    APCModbusSensorDescription(
+        key="battery_install_date",
+        name="Battery Installation Date",
+        native_unit_of_measurement="days",
+        state_class=STATE_CLASS_MEASUREMENT,
+        register_key="battery_install_date",
+    ),
+    APCModbusSensorDescription(
+        key="ups_name",
+        name="UPS Name",
+        register_key="ups_name",
+        state_class=None,
+    ),
 ]
 
 BINARY_SENSOR_DESCRIPTIONS = [

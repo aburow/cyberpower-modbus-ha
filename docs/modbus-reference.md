@@ -48,6 +48,16 @@ This reference distills the register groups from `990-9840B-EN.pdf` into a quick
 | `42049` (`ModbusMapID`) | Always `"12345678"`. Useful to verify you are talking to the expected map. |
 | `42051` (`TestString`) / `42055–42062` | Fixed ASCII/number values that prove byte order; use when building regression tests for Modbus responses. |
 
+## Identification Strings
+| Register | Notes |
+| --- | --- |
+| `40517` (`0x0204`, `FWVersion_STR`, 8 registers) | UPS firmware version string (16 ASCII characters). Read-only. |
+| `40533` (`0x0214`, `Model_STR`, 16 registers) | UPS model name (32 ASCII characters). |
+| `40549` (`0x0224`, `SKU_STR`, 16 registers) | UPS SKU identifier. |
+| `40565` (`0x0234`, `SerialNumber_STR`, 8 registers) | UPS serial number (16 ASCII characters). |
+| `40596` (`0x0253`, `Battery.DateSetting`, 1 register) | Battery installation date (days since January 1, 2000). Read-write. |
+| `40597` (`0x0254`, `Name_STR`, 8 registers) | User-assigned UPS name (16 ASCII characters). Read-write. |
+
 ## Using the Reference
 - Always combine multiple registers before scaling. The PDF layout provides all 32-bit fields (e.g., `RunTimeRemaining`, `Output.Energy`) and enumerations.
 - Read-only registers should not be written to unless explicitly marked (e.g., `MOG/SOG settings` and command registers).

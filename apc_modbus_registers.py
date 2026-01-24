@@ -179,6 +179,7 @@ REGISTERS = [
         "type": "uint16",
         "scale": 1,
     },
+    # 0x0018-0x0019 (offsets 24-25) are Reserved and will fail per vendor spec
     # Battery Configuration
     {
         "key": "minimum_return_battery_capacity",

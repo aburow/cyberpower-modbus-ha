@@ -30,7 +30,13 @@ from .const import (
     SUPPORTED_PLATFORMS,
 )
 from .coordinator import APCModbusCoordinator
-from .snmp_helper import async_get_device_metadata
+
+try:
+    from .snmp_helper import async_get_device_metadata
+    SNMP_AVAILABLE = True
+except ImportError:
+    SNMP_AVAILABLE = False
+    async_get_device_metadata = None
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -55,17 +61,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = APCModbusCoordinator(hass, client, unit, device_name)
 
     # Query SNMP for device metadata (non-blocking, fails gracefully)
-    try:
-        metadata = await async_get_device_metadata(host, snmp_community)
-        coordinator.set_device_metadata(
-            hw_model=metadata.get("model"),
-            serial_number=metadata.get("serial_number"),
-            fw_version=metadata.get("firmware_version"),
-            fw_date=metadata.get("firmware_date"),
-        )
-    except Exception as err:
-        _LOGGER.warning("Failed to query SNMP metadata from %s: %s", host, err)
-        # Continue without metadata - Modbus sensors still work
+    if SNMP_AVAILABLE and async_get_device_metadata:
+        try:
+            metadata = await async_get_device_metadata(host, snmp_community)
+            coordinator.set_device_metadata(
+                hw_model=metadata.get("model"),
+                serial_number=metadata.get("serial_number"),
+                fw_version=metadata.get("firmware_version"),
+                fw_date=metadata.get("firmware_date"),
+            )
+        except Exception as err:
+            _LOGGER.warning("Failed to query SNMP metadata from %s: %s", host, err)
+            # Continue without metadata - Modbus sensors still work
+    else:
+        _LOGGER.debug("SNMP not available, skipping device metadata query")
 
     try:
         await coordinator.async_config_entry_first_refresh()

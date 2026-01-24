@@ -1,0 +1,16 @@
+{
+  "domain": "apc_modbus",
+  "name": "APC UPS Modbus",
+  "version": "0.1.0",
+  "documentation": "https://github.com/schneiderelectric/apc-modbus-ha",
+  "requirements": [
+    "pymodbus>=3.1.1"
+  ],
+  "dependencies": [],
+  "codeowners": [
+    "@apc-modbus"
+  ],
+  "config_flow": true,
+  "iot_class": "local_polling",
+  "quality_scale": "internal"
+}

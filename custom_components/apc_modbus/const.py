@@ -7,10 +7,9 @@ from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntityDescription,
 )
-from homeassistant.components.sensor import SensorEntityDescription
-from homeassistant.const import STATE_CLASS_MEASUREMENT
+from homeassistant.components.sensor import SensorEntityDescription, SensorStateClass
 
-from apc_modbus_registers import REGISTERS
+from .apc_modbus_registers import REGISTERS, REGISTER_BLOCKS, REGISTER_MAP
 
 DOMAIN = "apc_modbus"
 DEFAULT_NAME = "APC UPS"
@@ -18,6 +17,7 @@ DEFAULT_PORT = 502
 DEFAULT_SCAN_INTERVAL = 10
 DEFAULT_UNIT = 1
 CONF_UNIT = "unit"
+CONF_DEVICE_NAME = "device_name"
 
 KEY_CLIENT = "modbus_client"
 KEY_COORDINATOR = "coordinator"
@@ -43,42 +43,42 @@ SENSOR_DESCRIPTIONS = [
         key="battery_state_of_charge",
         name="Battery State of Charge",
         native_unit_of_measurement="%",
-        state_class=STATE_CLASS_MEASUREMENT,
+        state_class=SensorStateClass.MEASUREMENT,
         register_key="battery_state_of_charge",
     ),
     APCModbusSensorDescription(
         key="battery_voltage",
         name="Battery Voltage",
         native_unit_of_measurement="V",
-        state_class=STATE_CLASS_MEASUREMENT,
+        state_class=SensorStateClass.MEASUREMENT,
         register_key="battery_voltage",
     ),
     APCModbusSensorDescription(
         key="runtime_remaining",
         name="Runtime Remaining",
         native_unit_of_measurement="min",
-        state_class=STATE_CLASS_MEASUREMENT,
+        state_class=SensorStateClass.MEASUREMENT,
         register_key="runtime_remaining",
     ),
     APCModbusSensorDescription(
         key="ups_internal_temperature",
         name="UPS Internal Temperature",
         native_unit_of_measurement="°C",
-        state_class=STATE_CLASS_MEASUREMENT,
+        state_class=SensorStateClass.MEASUREMENT,
         register_key="ups_internal_temperature",
     ),
     APCModbusSensorDescription(
         key="bad_battery_packs",
         name="Bad Battery Packs",
         native_unit_of_measurement="",
-        state_class=STATE_CLASS_MEASUREMENT,
+        state_class=SensorStateClass.MEASUREMENT,
         register_key="bad_battery_packs",
     ),
     APCModbusSensorDescription(
         key="total_battery_packs",
         name="Total Battery Packs",
         native_unit_of_measurement="",
-        state_class=STATE_CLASS_MEASUREMENT,
+        state_class=SensorStateClass.MEASUREMENT,
         register_key="total_battery_packs",
     ),
     # Load Sensors
@@ -86,14 +86,14 @@ SENSOR_DESCRIPTIONS = [
         key="load_amps",
         name="Load Current",
         native_unit_of_measurement="A",
-        state_class=STATE_CLASS_MEASUREMENT,
+        state_class=SensorStateClass.MEASUREMENT,
         register_key="load_amps",
     ),
     APCModbusSensorDescription(
         key="load_percent",
         name="Load Percent",
         native_unit_of_measurement="%",
-        state_class=STATE_CLASS_MEASUREMENT,
+        state_class=SensorStateClass.MEASUREMENT,
         register_key="load_percent",
     ),
     # Input Sensors
@@ -101,28 +101,28 @@ SENSOR_DESCRIPTIONS = [
         key="input_voltage",
         name="Input Voltage",
         native_unit_of_measurement="V",
-        state_class=STATE_CLASS_MEASUREMENT,
+        state_class=SensorStateClass.MEASUREMENT,
         register_key="input_voltage",
     ),
     APCModbusSensorDescription(
         key="input_frequency",
         name="Input Frequency",
         native_unit_of_measurement="Hz",
-        state_class=STATE_CLASS_MEASUREMENT,
+        state_class=SensorStateClass.MEASUREMENT,
         register_key="input_frequency",
     ),
     APCModbusSensorDescription(
         key="max_input_voltage",
         name="Max Input Voltage",
         native_unit_of_measurement="V",
-        state_class=STATE_CLASS_MEASUREMENT,
+        state_class=SensorStateClass.MEASUREMENT,
         register_key="max_input_voltage",
     ),
     APCModbusSensorDescription(
         key="min_input_voltage",
         name="Min Input Voltage",
         native_unit_of_measurement="V",
-        state_class=STATE_CLASS_MEASUREMENT,
+        state_class=SensorStateClass.MEASUREMENT,
         register_key="min_input_voltage",
     ),
     # Output Sensors
@@ -130,14 +130,14 @@ SENSOR_DESCRIPTIONS = [
         key="actual_output_voltage",
         name="Output Voltage",
         native_unit_of_measurement="V",
-        state_class=STATE_CLASS_MEASUREMENT,
+        state_class=SensorStateClass.MEASUREMENT,
         register_key="actual_output_voltage",
     ),
     APCModbusSensorDescription(
         key="nominal_output_voltage",
         name="Nominal Output Voltage",
         native_unit_of_measurement="V",
-        state_class=STATE_CLASS_MEASUREMENT,
+        state_class=SensorStateClass.MEASUREMENT,
         register_key="nominal_output_voltage",
     ),
     # Configuration Sensors
@@ -145,35 +145,35 @@ SENSOR_DESCRIPTIONS = [
         key="lower_transfer_point",
         name="Lower Transfer Point",
         native_unit_of_measurement="V",
-        state_class=STATE_CLASS_MEASUREMENT,
+        state_class=SensorStateClass.MEASUREMENT,
         register_key="lower_transfer_point",
     ),
     APCModbusSensorDescription(
         key="upper_transfer_point",
         name="Upper Transfer Point",
         native_unit_of_measurement="V",
-        state_class=STATE_CLASS_MEASUREMENT,
+        state_class=SensorStateClass.MEASUREMENT,
         register_key="upper_transfer_point",
     ),
     APCModbusSensorDescription(
         key="shutdown_delay",
         name="Shutdown Delay",
         native_unit_of_measurement="s",
-        state_class=STATE_CLASS_MEASUREMENT,
+        state_class=SensorStateClass.MEASUREMENT,
         register_key="shutdown_delay",
     ),
     APCModbusSensorDescription(
         key="low_battery_duration",
         name="Low Battery Duration",
         native_unit_of_measurement="min",
-        state_class=STATE_CLASS_MEASUREMENT,
+        state_class=SensorStateClass.MEASUREMENT,
         register_key="low_battery_duration",
     ),
     APCModbusSensorDescription(
         key="turn_on_delay",
         name="Turn On Delay",
         native_unit_of_measurement="s",
-        state_class=STATE_CLASS_MEASUREMENT,
+        state_class=SensorStateClass.MEASUREMENT,
         register_key="turn_on_delay",
     ),
     # Identification

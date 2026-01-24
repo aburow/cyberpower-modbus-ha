@@ -8,12 +8,21 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_SCAN_INTERVAL
 
-from .const import DOMAIN, DEFAULT_PORT, DEFAULT_SCAN_INTERVAL, DEFAULT_UNIT, CONF_UNIT
+from .const import (
+    CONF_DEVICE_NAME,
+    CONF_UNIT,
+    DEFAULT_NAME,
+    DEFAULT_PORT,
+    DEFAULT_SCAN_INTERVAL,
+    DEFAULT_UNIT,
+    DOMAIN,
+)
 
 
 DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST): str,
+        vol.Optional(CONF_DEVICE_NAME, default=DEFAULT_NAME): str,
         vol.Optional(CONF_PORT, default=DEFAULT_PORT): int,
         vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): int,
         vol.Optional(CONF_UNIT, default=DEFAULT_UNIT): int,
@@ -32,6 +41,6 @@ class APCModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_show_form(step_id="user", data_schema=DATA_SCHEMA)
 
         return self.async_create_entry(
-            title=user_input[CONF_HOST],
+            title=user_input.get(CONF_DEVICE_NAME, user_input[CONF_HOST]),
             data={**user_input},
         )

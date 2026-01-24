@@ -9,5 +9,6 @@
 | --- | --- |
 | `ups_status`, `ups_status_change`, `general_error`, `power_system_error`, `battery_system_error` | Successful read; values all `0` (no faults, standard status). |
 | Remaining registers (runtime, SOC, battery volts/temps, output frequency/voltage) | Modbus `ExceptionResponse`: function code `131`, exception code `2` (illegal data address). |
+| Identification registers (firmware/model/SKU/serial/battery install date/name) | Same `ExceptionResponse` (function code `131`, exception code `2`); the UPS currently blocks reads beyond the core status bits. |
 
 > The UPS only allows the first few registers without additional configuration. The downstream integration must handle these responses gracefully (log and skip) and consider using alternative function codes or addresses when they become available.

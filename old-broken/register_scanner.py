@@ -103,14 +103,14 @@ port=args.port
 #Create workbook to save the result
 wb=Workbook()
 
-#Read Input Registers - valid and Data [Read Only] - First 45 only
+#Read Input Registers - valid and Data [Read Only] - Up to 0x4F (79)
 print("******************************")
-print("Reading Input Registers - 0x04 (1-45)")
+print("Reading Input Registers - 0x04 (1-79)")
 input_valid_list=[]
 input_data_list=[]
 input_permission_list=[]
 client=ModbusClient(host=ip_addr,port=port,auto_open=True,auto_close=True,timeout=10)
-for i in tqdm(range(1,46)):
+for i in tqdm(range(1,80)):
 	data=client.read_input_registers(i,1)
 	if data:
 		input_valid_list.append(i)
@@ -119,14 +119,14 @@ for i in tqdm(range(1,46)):
 client.close()
 wb=write_to_excel(wb,"Input_Register",input_valid_list,input_data_list,input_permission_list,30000)
 
-#Holding Registers - valid and Data [Read and Write] - First 45 only
+#Holding Registers - valid and Data [Read and Write] - Up to 0x4F (79)
 print("******************************")
-print("Reading Holding Registers - 0x03 (1-45)")
+print("Reading Holding Registers - 0x03 (1-79)")
 hold_valid_list=[]
 hold_data_list=[]
 hold_permission_list=[]
 client=ModbusClient(host=ip_addr,port=port,auto_open=True,auto_close=True,timeout=10)
-for i in tqdm(range(1,46)):
+for i in tqdm(range(1,80)):
 	data=client.read_holding_registers(i,1)
 	if data:
 		hold_valid_list.append(i)

@@ -100,10 +100,11 @@ class APCModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             chars: list[str] = []
             for reg in registers:
                 if ascii_width == 1:
-                    # One char per register: character is in MSB (big-endian)
-                    chars.append(chr((reg >> 8) & 0xFF))
+                    # One char per register: character is in lower byte (LSB)
+                    # Upper byte is typically 0x00 padding
+                    chars.append(chr(reg & 0xFF))
                 else:
-                    # Two chars per register: both bytes are ASCII
+                    # Two chars per register: MSB first (big-endian)
                     chars.append(chr((reg >> 8) & 0xFF))
                     chars.append(chr(reg & 0xFF))
             return "".join(chars).rstrip()

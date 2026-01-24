@@ -237,7 +237,7 @@ REGISTERS = [
         "type": "uint16",
         "scale": 1,
     },
-    # UPS Identification
+    # UPS Identification (8 ASCII characters)
     {
         "key": "ups_id",
         "address": 0x0022,
@@ -245,5 +245,52 @@ REGISTERS = [
         "type": "ascii",
         "scale": 1,
         "ascii_width": 1,
+    },
+    # Status Word 4 (extended faults)
+    {
+        "key": "status_word_4",
+        "address": 0x002A,
+        "count": 1,
+        "type": "uint16",
+        "scale": 1,
+    },
+    # Status Word 5 (extended faults)
+    {
+        "key": "status_word_5",
+        "address": 0x002B,
+        "count": 1,
+        "type": "uint16",
+        "scale": 1,
+    },
+    # Battery Voltage Information
+    {
+        "key": "nominal_battery_voltage",
+        "address": 0x002C,
+        "count": 1,
+        "type": "uint16",
+        "scale": 1,
+    },
+    {
+        "key": "actual_battery_voltage",
+        "address": 0x002D,
+        "count": 1,
+        "type": "uint16",
+        "scale": 1,
+    },
+    # Three-phase specific (if applicable)
+    {
+        "key": "utility_input_voltage_phase_a",
+        "address": 0x002E,
+        "count": 1,
+        "type": "uint16",
+        "scale": 1,
+    },
+    # Battery Current (last valid register before reserved)
+    {
+        "key": "battery_current",
+        "address": 0x004D,
+        "count": 1,
+        "type": "int16",
+        "scale": 1,
     },
 ]

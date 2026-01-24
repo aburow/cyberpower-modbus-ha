@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import functools
 import logging
 from typing import Any
 
-from pymodbus.client.sync import ModbusTcpClient
+from pymodbus.client import ModbusTcpClient
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -38,12 +39,13 @@ class APCModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         data: dict[str, Any] = {}
 
         for descriptor in REGISTERS:
-            result = await self.hass.async_add_executor_job(
+            read_request = functools.partial(
                 self.client.read_holding_registers,
                 descriptor["address"],
-                descriptor["count"],
-                unit=self.unit,
+                count=descriptor["count"],
+                device_id=self.unit,
             )
+            result = await self.hass.async_add_executor_job(read_request)
             if result.isError():
                 raise UpdateFailed(
                     f"Modbus read failure for {descriptor['key']}"

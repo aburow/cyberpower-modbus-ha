@@ -10,6 +10,8 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.components.sensor import SensorEntityDescription
 from homeassistant.const import STATE_CLASS_MEASUREMENT
 
+from apc_modbus_registers import REGISTERS
+
 DOMAIN = "apc_modbus"
 DEFAULT_NAME = "APC UPS"
 DEFAULT_PORT = 502
@@ -34,100 +36,6 @@ class APCModbusBinarySensorDescription(BinarySensorEntityDescription):
 
     register_key: str = ""
     bit_index: int = 0
-
-REGISTERS = [
-    {
-        "key": "ups_status",
-        "address": 0x0000,
-        "count": 2,
-        "type": "uint32",
-        "scale": 1,
-    },
-    {
-        "key": "ups_status_change",
-        "address": 0x0002,
-        "count": 1,
-        "type": "uint16",
-        "scale": 1,
-    },
-    {
-        "key": "general_error",
-        "address": 0x0013,
-        "count": 1,
-        "type": "uint16",
-        "scale": 1,
-    },
-    {
-        "key": "power_system_error",
-        "address": 0x0014,
-        "count": 2,
-        "type": "uint32",
-        "scale": 1,
-    },
-    {
-        "key": "battery_system_error",
-        "address": 0x0016,
-        "count": 1,
-        "type": "uint16",
-        "scale": 1,
-    },
-    {
-        "key": "run_time_remaining",
-        "address": 0x0080,
-        "count": 2,
-        "type": "uint32",
-        "scale": 1,
-    },
-    {
-        "key": "state_of_charge",
-        "address": 0x0082,
-        "count": 1,
-        "type": "uint16",
-        "scale": 512,
-    },
-    {
-        "key": "battery_positive_voltage",
-        "address": 0x0083,
-        "count": 1,
-        "type": "int16",
-        "scale": 32,
-    },
-    {
-        "key": "battery_negative_voltage",
-        "address": 0x0084,
-        "count": 1,
-        "type": "int16",
-        "scale": 32,
-    },
-    {
-        "key": "battery_temperature",
-        "address": 0x0087,
-        "count": 1,
-        "type": "int16",
-        "scale": 128,
-    },
-    {
-        "key": "output_frequency",
-        "address": 0x0090,
-        "count": 1,
-        "type": "uint16",
-        "scale": 128,
-    },
-    {
-        "key": "output_voltage_phase_1",
-        "address": 0x008C,
-        "count": 1,
-        "type": "uint16",
-        "scale": 64,
-    },
-    {
-        "key": "output_voltage_phase_2",
-        "address": 0x008D,
-        "count": 1,
-        "type": "uint16",
-        "scale": 64,
-    },
-]
 
 SENSOR_DESCRIPTIONS = [
     APCModbusSensorDescription(

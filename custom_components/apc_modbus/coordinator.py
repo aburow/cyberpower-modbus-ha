@@ -74,6 +74,16 @@ class APCModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raw = (registers[0] << 16) | registers[1]
             if dtype == "int32" and raw >= 0x80000000:
                 raw -= 0x100000000
+        elif dtype == "ascii" and registers:
+            ascii_width = descriptor.get("ascii_width", 2)
+            chars: list[str] = []
+            for reg in registers:
+                if ascii_width == 1:
+                    chars.append(chr(reg & 0xFF))
+                else:
+                    chars.append(chr((reg >> 8) & 0xFF))
+                    chars.append(chr(reg & 0xFF))
+            return "".join(chars).rstrip()
         else:
             return None
 

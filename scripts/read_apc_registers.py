@@ -26,10 +26,14 @@ def decode_register(registers: list[int], descriptor: dict[str, Any]) -> float |
         if dtype == "int32" and raw >= 0x80000000:
             raw -= 0x100000000
     elif dtype == "ascii" and registers:
+        ascii_width = descriptor.get("ascii_width", 2)
         chars: list[str] = []
         for reg in registers:
-            chars.append(chr((reg >> 8) & 0xFF))
-            chars.append(chr(reg & 0xFF))
+            if ascii_width == 1:
+                chars.append(chr(reg & 0xFF))
+            else:
+                chars.append(chr((reg >> 8) & 0xFF))
+                chars.append(chr(reg & 0xFF))
         return "".join(chars).rstrip()
     else:
         return None
@@ -45,6 +49,12 @@ def main() -> None:
     parser.add_argument("host", nargs="?", default="192.168.100.8", help="Modbus TCP host")
     parser.add_argument("--port", type=int, default=502, help="Modbus TCP port")
     parser.add_argument("--unit", type=int, default=1, help="Modbus slave/unit ID")
+    parser.add_argument(
+        "--function",
+        choices=("holding", "input"),
+        default="holding",
+        help="Modbus function register type",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO)
@@ -55,9 +65,13 @@ def main() -> None:
 
     print(f"Connected to {args.host}:{args.port} (unit {args.unit})")
     try:
+        read_fn = client.read_holding_registers
+        if args.function == "input":
+            read_fn = client.read_input_registers
+
         for descriptor in REGISTERS:
             name = descriptor["key"]
-            result = client.read_holding_registers(
+            result = read_fn(
                 descriptor["address"],
                 count=descriptor["count"],
                 device_id=args.unit,

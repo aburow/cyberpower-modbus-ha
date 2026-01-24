@@ -18,9 +18,11 @@ from homeassistant.const import CONF_HOST, CONF_PORT
 
 from .const import (
     CONF_DEVICE_NAME,
+    CONF_SNMP_COMMUNITY,
     CONF_UNIT,
     DEFAULT_NAME,
     DEFAULT_PORT,
+    DEFAULT_SNMP_COMMUNITY,
     DEFAULT_UNIT,
     DOMAIN,
     KEY_CLIENT,
@@ -28,6 +30,7 @@ from .const import (
     SUPPORTED_PLATFORMS,
 )
 from .coordinator import APCModbusCoordinator
+from .snmp_helper import async_get_device_metadata
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -41,6 +44,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     port = entry.data.get(CONF_PORT, DEFAULT_PORT)
     unit = entry.data.get(CONF_UNIT, DEFAULT_UNIT)
     device_name = entry.data.get(CONF_DEVICE_NAME, DEFAULT_NAME)
+    snmp_community = entry.data.get(CONF_SNMP_COMMUNITY, DEFAULT_SNMP_COMMUNITY)
 
     # Create client with timeout to prevent hung connections
     client = ModbusTcpClient(host=host, port=port, timeout=5)
@@ -49,6 +53,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         raise ConfigEntryNotReady("Unable to connect to APC UPS")
 
     coordinator = APCModbusCoordinator(hass, client, unit, device_name)
+
+    # Query SNMP for device metadata (non-blocking, fails gracefully)
+    try:
+        metadata = await async_get_device_metadata(host, snmp_community)
+        coordinator.set_device_metadata(
+            hw_model=metadata.get("model"),
+            serial_number=metadata.get("serial_number"),
+            fw_version=metadata.get("firmware_version"),
+            fw_date=metadata.get("firmware_date"),
+        )
+    except Exception as err:
+        _LOGGER.warning("Failed to query SNMP metadata from %s: %s", host, err)
+        # Continue without metadata - Modbus sensors still work
 
     try:
         await coordinator.async_config_entry_first_refresh()

@@ -43,6 +43,30 @@ class APCModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.device_name = device_name
         # Initialize data as empty dict to ensure it's always present
         self.data: dict[str, Any] = {}
+        # Device metadata (populated via SNMP at startup)
+        self.hw_model: str | None = None
+        self.serial_number: str | None = None
+        self.fw_version: str | None = None
+        self.fw_date: str | None = None
+
+    def set_device_metadata(
+        self,
+        hw_model: str | None,
+        serial_number: str | None,
+        fw_version: str | None,
+        fw_date: str | None,
+    ) -> None:
+        """Set device metadata from SNMP query."""
+        self.hw_model = hw_model
+        self.serial_number = serial_number
+        self.fw_version = fw_version
+        self.fw_date = fw_date
+        _LOGGER.debug(
+            "Device metadata set: model=%s, serial=%s, firmware=%s",
+            hw_model,
+            serial_number,
+            fw_version,
+        )
 
     @staticmethod
     def _is_error_response(result) -> bool:

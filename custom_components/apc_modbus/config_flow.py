@@ -10,10 +10,12 @@ from homeassistant.const import CONF_HOST, CONF_PORT, CONF_SCAN_INTERVAL
 
 from .const import (
     CONF_DEVICE_NAME,
+    CONF_SNMP_COMMUNITY,
     CONF_UNIT,
     DEFAULT_NAME,
     DEFAULT_PORT,
     DEFAULT_SCAN_INTERVAL,
+    DEFAULT_SNMP_COMMUNITY,
     DEFAULT_UNIT,
     DOMAIN,
 )
@@ -26,6 +28,7 @@ DATA_SCHEMA = vol.Schema(
         vol.Optional(CONF_PORT, default=DEFAULT_PORT): int,
         vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): int,
         vol.Optional(CONF_UNIT, default=DEFAULT_UNIT): int,
+        vol.Optional(CONF_SNMP_COMMUNITY, default=DEFAULT_SNMP_COMMUNITY): str,
     }
 )
 

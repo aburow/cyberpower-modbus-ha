@@ -10,9 +10,19 @@ build/
 .coverage
 *.egg
 
-# Test files
+# Test files and exploratory code
 test_*.py
 *_test.py
+compare_protocols.py
+apc_modbus_registers.py
+setup_test_env.sh
+test_venv/
+old-broken/
+
+# Exploratory documentation
+PROTOCOL_COMPARISON.md
+TEST_README.md
+AGENTS.md
 
 # IDE
 .vscode/
@@ -22,7 +32,8 @@ test_*.py
 .DS_Store
 Thumbs.db
 
-# Development
+# Documentation and resources
+*.pdf
 *.xls
 *.xlsx
-*.pdf
+docs/

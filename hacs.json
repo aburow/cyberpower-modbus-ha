@@ -1,0 +1,6 @@
+{
+  "name": "APC UPS Modbus",
+  "homeassistant": "2024.1.0",
+  "documentation": "https://github.com/schneiderelectric/apc-modbus-ha",
+  "requirements": ["pymodbus>=3.1.1"]
+}

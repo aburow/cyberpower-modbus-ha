@@ -1,6 +1,28 @@
 .venv/
+test_venv/
 __pycache__/
 *.pyc
-
-# logs from scripts
 *.log
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+*.egg
+
+# Test files
+test_*.py
+*_test.py
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Development
+*.xls
+*.xlsx
+*.pdf

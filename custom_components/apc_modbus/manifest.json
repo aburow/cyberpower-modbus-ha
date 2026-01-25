@@ -1,6 +1,7 @@
 {
   "domain": "apc_modbus",
   "name": "APC UPS Modbus",
+  "icon": "mdi:battery",
   "version": "0.1.0",
   "documentation": "https://github.com/schneiderelectric/apc-modbus-ha",
   "requirements": [

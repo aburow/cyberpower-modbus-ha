@@ -34,13 +34,16 @@ from .const import (
     SUPPORTED_PLATFORMS,
 )
 from .coordinator import APCModbusCoordinator
+from .device_types import APCDeviceType
+from .register_factory import get_registers_for_device
 
 try:
-    from .snmp_helper import async_get_device_metadata
+    from .snmp_helper import async_get_device_metadata, detect_device_type
     SNMP_AVAILABLE = True
 except ImportError:
     SNMP_AVAILABLE = False
     async_get_device_metadata = None
+    detect_device_type = None
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -64,8 +67,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     coordinator = APCModbusCoordinator(hass, client, unit, device_name)
 
-    # Query SNMP for device metadata (non-blocking, fails gracefully)
-    if SNMP_AVAILABLE and async_get_device_metadata:
+    # Query SNMP for device metadata and detect device type (non-blocking, fails gracefully)
+    device_type = APCDeviceType.SMART_UPS  # default
+    if SNMP_AVAILABLE and async_get_device_metadata and detect_device_type:
         try:
             metadata = await async_get_device_metadata(host, snmp_community)
             coordinator.set_device_metadata(
@@ -74,16 +78,35 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 fw_version=metadata.get("firmware_version"),
                 fw_date=metadata.get("firmware_date"),
             )
+            # Detect device type from model string
+            device_type = detect_device_type(metadata.get("model"))
+            coordinator.set_device_type(device_type)
         except Exception as err:
             _LOGGER.warning("Failed to query SNMP metadata from %s: %s", host, err)
-            # Continue without metadata - Modbus sensors still work
+            # Continue without metadata - Modbus sensors still work, default to Smart-UPS
+            coordinator.set_device_type(APCDeviceType.SMART_UPS)
     else:
-        _LOGGER.debug("SNMP not available, skipping device metadata query")
+        _LOGGER.debug("SNMP not available, defaulting device type to Smart-UPS")
+        coordinator.set_device_type(APCDeviceType.SMART_UPS)
+
+    # Load registers for detected device type
+    registers, blocks, reg_map = get_registers_for_device(coordinator.device_type)
+    coordinator.set_registers(registers, blocks, reg_map)
+
+    # For Rack PDU, discover capabilities for dynamic entity generation
+    if coordinator.device_type == APCDeviceType.RACK_PDU:
+        try:
+            capabilities = await coordinator.async_discover_capabilities()
+            if capabilities:
+                coordinator.set_capabilities(capabilities)
+        except Exception as err:
+            _LOGGER.warning("Failed to discover Rack PDU capabilities: %s", err)
+            # Continue - will create entities with default capabilities
 
     try:
         await coordinator.async_config_entry_first_refresh()
     except Exception as err:
-        _LOGGER.error("Failed to fetch initial data from APC UPS: %s", err)
+        _LOGGER.error("Failed to fetch initial data from APC device: %s", err)
         raise ConfigEntryNotReady(f"Failed to fetch initial data: {err}") from err
 
     hass.data[DOMAIN][entry.entry_id] = {

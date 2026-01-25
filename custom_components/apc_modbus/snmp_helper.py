@@ -20,6 +20,8 @@ from pysnmp.hlapi.asyncio import (
     getCmd,
 )
 
+from .device_types import APCDeviceType
+
 _LOGGER = logging.getLogger(__name__)
 
 # APC UPS SNMP OIDs
@@ -96,3 +98,33 @@ async def async_get_device_metadata(
 
     _LOGGER.debug("SNMP metadata retrieved: %s", metadata)
     return metadata
+
+
+def detect_device_type(model_string: str | None) -> APCDeviceType:
+    """Detect device type from SNMP model string.
+
+    Patterns:
+    - "AP8*" or "APDU*" or "*Rack PDU*" → RACK_PDU
+    - "Smart-UPS*" or "SMART-UPS*" → SMART_UPS
+    - None/unknown → SMART_UPS (backward compatibility default)
+
+    Args:
+        model_string: The model string from SNMP query
+
+    Returns:
+        APCDeviceType enum indicating the device type
+    """
+    if not model_string:
+        return APCDeviceType.SMART_UPS
+
+    model_upper = model_string.upper()
+
+    # Check for Rack PDU patterns
+    if "AP8" in model_upper or model_upper.startswith("APDU") or "RACK PDU" in model_upper:
+        return APCDeviceType.RACK_PDU
+
+    # Check for Smart-UPS patterns
+    if "SMART-UPS" in model_upper or "SMART UPS" in model_upper:
+        return APCDeviceType.SMART_UPS
+
+    return APCDeviceType.SMART_UPS  # Safe default

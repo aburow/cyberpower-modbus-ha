@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -15,11 +17,13 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     APCModbusBinarySensorDescription,
-    BINARY_SENSOR_DESCRIPTIONS,
     DOMAIN,
     KEY_COORDINATOR,
 )
 from .coordinator import APCModbusCoordinator
+from .device_types import APCDeviceType
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -29,8 +33,25 @@ async def async_setup_entry(
 ) -> None:
     """Set up the APC UPS binary sensors."""
     coordinator: APCModbusCoordinator = hass.data[DOMAIN][entry.entry_id][KEY_COORDINATOR]
+
+    # Get device-type-specific binary sensor descriptions
+    if coordinator.device_type == APCDeviceType.SMART_UPS:
+        # Smart-UPS uses static binary sensor descriptions from const
+        from .const import BINARY_SENSOR_DESCRIPTIONS
+        binary_sensor_descriptions = BINARY_SENSOR_DESCRIPTIONS
+    elif coordinator.device_type == APCDeviceType.RACK_PDU:
+        # Rack PDU uses dynamic binary sensor descriptions based on capabilities
+        from . import registers_rack_pdu
+        binary_sensor_descriptions = registers_rack_pdu.get_binary_sensor_descriptions(coordinator.device_capabilities)
+    else:
+        # Unknown type defaults to Smart-UPS binary sensor descriptions
+        from .const import BINARY_SENSOR_DESCRIPTIONS
+        binary_sensor_descriptions = BINARY_SENSOR_DESCRIPTIONS
+
+    _LOGGER.debug("Setting up %d binary sensors for device type %s", len(binary_sensor_descriptions), coordinator.device_type.value)
+
     async_add_entities(
-        APCModbusBinarySensor(coordinator, description, entry.entry_id) for description in BINARY_SENSOR_DESCRIPTIONS
+        APCModbusBinarySensor(coordinator, description, entry.entry_id) for description in binary_sensor_descriptions
     )
 
 

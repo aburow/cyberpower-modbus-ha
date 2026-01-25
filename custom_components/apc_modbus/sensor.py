@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -17,9 +19,12 @@ from .const import (
     APCModbusSensorDescription,
     DOMAIN,
     KEY_COORDINATOR,
-    SENSOR_DESCRIPTIONS,
 )
 from .coordinator import APCModbusCoordinator
+from .device_types import APCDeviceType
+from .register_factory import get_registers_for_device
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -30,8 +35,24 @@ async def async_setup_entry(
     """Set up the APC UPS sensors for a config entry."""
     coordinator: APCModbusCoordinator = hass.data[DOMAIN][entry.entry_id][KEY_COORDINATOR]
 
+    # Get device-type-specific sensor descriptions
+    if coordinator.device_type == APCDeviceType.SMART_UPS:
+        # Smart-UPS uses static sensor descriptions from const
+        from .const import SENSOR_DESCRIPTIONS
+        sensor_descriptions = SENSOR_DESCRIPTIONS
+    elif coordinator.device_type == APCDeviceType.RACK_PDU:
+        # Rack PDU uses dynamic sensor descriptions based on capabilities
+        from . import registers_rack_pdu
+        sensor_descriptions = registers_rack_pdu.get_sensor_descriptions(coordinator.device_capabilities)
+    else:
+        # Unknown type defaults to Smart-UPS sensor descriptions
+        from .const import SENSOR_DESCRIPTIONS
+        sensor_descriptions = SENSOR_DESCRIPTIONS
+
+    _LOGGER.debug("Setting up %d sensors for device type %s", len(sensor_descriptions), coordinator.device_type.value)
+
     async_add_entities(
-        APCModbusSensor(coordinator, description, entry.entry_id) for description in SENSOR_DESCRIPTIONS
+        APCModbusSensor(coordinator, description, entry.entry_id) for description in sensor_descriptions
     )
 
 

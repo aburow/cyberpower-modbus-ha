@@ -20,7 +20,9 @@ from pymodbus.client import ModbusTcpClient
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import DOMAIN, REGISTERS, REGISTER_BLOCKS, REGISTER_MAP, SCAN_INTERVAL
+from .const import DOMAIN, SCAN_INTERVAL
+from .device_types import APCDeviceType
+from . import registers_smart_ups
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,6 +54,13 @@ class APCModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.serial_number: str | None = None
         self.fw_version: str | None = None
         self.fw_date: str | None = None
+        # Device type and capabilities (for multi-device support)
+        self.device_type: APCDeviceType = APCDeviceType.SMART_UPS
+        self.device_capabilities: dict[str, int] = {}
+        # Registers and blocks (loaded from factory based on device type)
+        self.registers: list[dict[str, Any]] = registers_smart_ups.REGISTERS
+        self.register_blocks: list[dict[str, Any]] = registers_smart_ups.REGISTER_BLOCKS
+        self.register_map: dict[int, dict[str, Any]] = registers_smart_ups.REGISTER_MAP
 
     def set_device_metadata(
         self,
@@ -71,6 +80,78 @@ class APCModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             serial_number,
             fw_version,
         )
+
+    def set_device_type(self, device_type: APCDeviceType) -> None:
+        """Set the detected device type."""
+        self.device_type = device_type
+        _LOGGER.info("Device type set to: %s", device_type.value)
+
+    def set_capabilities(self, capabilities: dict[str, int]) -> None:
+        """Set device capabilities for dynamic entity generation (Rack PDU)."""
+        self.device_capabilities = capabilities
+        _LOGGER.debug("Device capabilities set: %s", capabilities)
+
+    def set_registers(
+        self,
+        registers: list[dict[str, Any]],
+        register_blocks: list[dict[str, Any]],
+        register_map: dict[int, dict[str, Any]],
+    ) -> None:
+        """Set registers, blocks, and map for the device type."""
+        self.registers = registers
+        self.register_blocks = register_blocks
+        self.register_map = register_map
+        _LOGGER.debug("Registers updated: %d registers, %d blocks", len(registers), len(register_blocks))
+
+    async def async_discover_capabilities(self) -> dict[str, int]:
+        """Discover device capabilities for Rack PDU (reads capability registers).
+
+        Returns a dict with keys: num_phases, num_metered_phases, num_banks, num_outlets, num_metered_outlets
+        """
+        capabilities = {}
+
+        # Capability register addresses
+        capability_regs = {
+            "num_phases": 0x009E,
+            "num_metered_phases": 0x009F,
+            "num_banks": 0x00A0,
+            "num_outlets": 0x00A1,
+            "num_metered_outlets": 0x00A2,
+        }
+
+        try:
+            # Try to read capability registers
+            for cap_name, addr in capability_regs.items():
+                try:
+                    read_request = functools.partial(
+                        self.client.read_holding_registers,
+                        addr,
+                        count=1,
+                        device_id=self.unit,
+                    )
+                    result = await self.hass.async_add_executor_job(read_request)
+
+                    if not self._is_error_response(result) and result.registers:
+                        capabilities[cap_name] = result.registers[0]
+                    else:
+                        _LOGGER.debug("Failed to read capability register %s at 0x%04X", cap_name, addr)
+                except Exception as err:
+                    _LOGGER.debug("Error reading capability register %s: %s", cap_name, err)
+
+            if capabilities:
+                _LOGGER.info(
+                    "Rack PDU capabilities discovered: %d phases, %d outlets, %d banks",
+                    capabilities.get("num_phases", 0),
+                    capabilities.get("num_metered_outlets", 0),
+                    capabilities.get("num_banks", 0),
+                )
+            else:
+                _LOGGER.warning("Failed to discover any capability registers for Rack PDU")
+
+        except Exception as err:
+            _LOGGER.error("Error discovering capabilities: %s", err)
+
+        return capabilities
 
     @staticmethod
     def _is_error_response(result) -> bool:
@@ -100,6 +181,7 @@ class APCModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # Don't clear data - preserve any partial data from successful block reads
             await self._try_individual_reads(data, errors)
             _LOGGER.debug("Individual reads fallback complete (data keys: %s)", list(data.keys()))
+            _LOGGER.debug("Individual reads fallback complete (data keys: %s)", list(data.keys()))
 
         if not data:
             raise UpdateFailed(f"Unable to read any registers: {', '.join(errors)}")
@@ -116,7 +198,7 @@ class APCModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Try to read data using block reads. Returns True if any blocks succeed, False if all fail."""
         block_success_count = 0
 
-        for block in REGISTER_BLOCKS:
+        for block in self.register_blocks:
             try:
                 _LOGGER.debug("Reading block %s (addr 0x%04X, count %d)", block["name"], block["start_address"], block["count"])
                 read_request = functools.partial(
@@ -138,8 +220,8 @@ class APCModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     )
                     # Mark all registers in this block as failed, but continue to next block
                     for addr in block["registers"]:
-                        if addr in REGISTER_MAP:
-                            errors.append(REGISTER_MAP[addr]["key"])
+                        if addr in self.register_map:
+                            errors.append(self.register_map[addr]["key"])
                     continue
 
                 # Block read successful, increment counter
@@ -148,10 +230,10 @@ class APCModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
                 # Decode each register in the block
                 for addr in block["registers"]:
-                    if addr not in REGISTER_MAP:
+                    if addr not in self.register_map:
                         continue
 
-                    descriptor = REGISTER_MAP[addr]
+                    descriptor = self.register_map[addr]
                     offset = addr - block["start_address"]
                     reg_count = descriptor["count"]
                     reg_slice = result.registers[offset : offset + reg_count]
@@ -207,10 +289,10 @@ class APCModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                             block_success_count += 1
                             # Decode the registers from this successful block
                             for addr in block["registers"]:
-                                if addr not in REGISTER_MAP:
+                                if addr not in self.register_map:
                                     continue
 
-                                descriptor = REGISTER_MAP[addr]
+                                descriptor = self.register_map[addr]
                                 offset = addr - block["start_address"]
                                 reg_count = descriptor["count"]
                                 reg_slice = result.registers[offset : offset + reg_count]
@@ -232,8 +314,8 @@ class APCModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
                 # Mark all registers in this block as failed
                 for addr in block["registers"]:
-                    if addr in REGISTER_MAP:
-                        errors.append(REGISTER_MAP[addr]["key"])
+                    if addr in self.register_map:
+                        errors.append(self.register_map[addr]["key"])
 
         # Return True if at least one block succeeded
         return block_success_count > 0
@@ -242,7 +324,7 @@ class APCModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Try to read data using individual registers with reconnection logic."""
         consecutive_failures = 0
 
-        for descriptor in REGISTERS:
+        for descriptor in self.registers:
             try:
                 # Try to read register with automatic reconnection if needed
                 result = await self._read_register_with_reconnect(descriptor)

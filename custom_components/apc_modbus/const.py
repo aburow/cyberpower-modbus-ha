@@ -13,7 +13,7 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.components.sensor import SensorEntityDescription, SensorStateClass
 
-from .apc_modbus_registers import REGISTERS, REGISTER_BLOCKS, REGISTER_MAP
+from .registers_smart_ups import REGISTERS, REGISTER_BLOCKS, REGISTER_MAP
 
 DOMAIN = "apc_modbus"
 DEFAULT_NAME = "APC UPS"

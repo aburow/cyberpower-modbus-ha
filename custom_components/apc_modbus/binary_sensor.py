@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0
-# Copyright (C) 2026 Anthony Burow <apburow@gmail.com>
+# Copyright (C) 2026 Anthony Burow
 # https://github.com/aburow/apc-modbus-snmp-ha
 
 """Binary sensor definitions for APC UPS Modbus."""

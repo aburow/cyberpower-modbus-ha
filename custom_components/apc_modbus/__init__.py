@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0
-# Copyright (C) 2026 Anthony Burow <apburow@gmail.com>
+# Copyright (C) 2026 Anthony Burow
 # https://github.com/aburow/apc-modbus-snmp-ha
 
 """APC UPS Modbus integration entry point."""

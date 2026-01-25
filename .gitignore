@@ -11,13 +11,7 @@ build/
 *.egg
 
 # Test files and exploratory code
-test_*.py
-*_test.py
-compare_protocols.py
-apc_modbus_registers.py
-setup_test_env.sh
-test_venv/
-old-broken/
+localonly/
 
 # Exploratory documentation
 PROTOCOL_COMPARISON.md

@@ -23,7 +23,7 @@ A Home Assistant integration for monitoring and controlling APC UPS devices via 
 
 1. Go to HACS in Home Assistant
 2. Click the three-dot menu and select "Custom repositories"
-3. Add repository: `https://github.com/schneiderelectric/apc-modbus-ha`
+3. Add repository: `https://github.com/aburow/apc-modbus-snmp-ha`
 4. Select "Integration" category
 5. Install "APC UPS Modbus"
 6. Restart Home Assistant
@@ -80,8 +80,7 @@ This integration works with any APC UPS that supports:
 
 ## Support
 
-- **Documentation**: See [docs/](docs/) folder
-- **Issues**: Report bugs on [GitHub Issues](https://github.com/schneiderelectric/apc-modbus-ha/issues)
+- **Issues**: Report bugs on [GitHub Issues](https://github.com/aburow/apc-modbus-snmp-ha/issues)
 
 ## License
 

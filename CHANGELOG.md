@@ -30,4 +30,4 @@ All notable changes to the APC UPS Modbus integration will be documented in this
 
 ---
 
-For detailed information about each release, visit the [releases page](https://github.com/schneiderelectric/apc-modbus-ha/releases).
+For detailed information about each release, visit the [releases page](https://github.com/aburow/apc-modbus-snmp-ha/releases).

@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: GPL-3.0
+# Copyright (C) 2026 Anthony Burow <apburow@gmail.com>
+# https://github.com/aburow/apc-modbus-snmp-ha
+
 """Modbus data coordinator for APC UPS sensors.
 
 Note: pymodbus API compatibility

@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: GPL-3.0
+# Copyright (C) 2026 Anthony Burow <apburow@gmail.com>
+# https://github.com/aburow/apc-modbus-snmp-ha
+
 """Shared register definitions for the APC UPS Modbus integration.
 
 Based on 990-5702A-EN (Smart-UPS excluding SMT/SMX/SURTD/SRT).

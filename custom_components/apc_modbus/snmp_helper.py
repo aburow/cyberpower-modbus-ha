@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: GPL-3.0
+# Copyright (C) 2026 Anthony Burow <apburow@gmail.com>
+# https://github.com/aburow/apc-modbus-snmp-ha
+
 """SNMP helper for APC UPS device metadata retrieval."""
 
 from __future__ import annotations

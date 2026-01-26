@@ -178,14 +178,21 @@ REGISTER_BLOCKS = [
         "registers": [0x229C],
     },
     {
-        "name": "measurements",
+        "name": "measurements_primary",
         "start_address": 0x3000,
-        "count": 0x95,
+        "count": 0x28,
         "registers": [
             0x3000,
             0x3001,
             0x3020,
             0x3027,
+        ],
+    },
+    {
+        "name": "measurements_battery",
+        "start_address": 0x3082,
+        "count": 0x13,
+        "registers": [
             0x3082,
             0x3083,
             0x3093,

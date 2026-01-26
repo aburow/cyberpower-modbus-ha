@@ -296,19 +296,16 @@ def get_binary_sensor_descriptions() -> list[CyberPowerModbusBinarySensorDescrip
         CyberPowerModbusBinarySensorDescription(
             key="battery_discharging",
             name="Battery Discharging",
-            device_class=BinarySensorDeviceClass.BATTERY,
             register_key="battery_discharging",
         ),
         CyberPowerModbusBinarySensorDescription(
             key="battery_charging",
             name="Battery Charging",
-            device_class=BinarySensorDeviceClass.BATTERY,
             register_key="battery_charging",
         ),
         CyberPowerModbusBinarySensorDescription(
             key="battery_fully_charged",
             name="Battery Fully Charged",
-            device_class=BinarySensorDeviceClass.BATTERY,
             register_key="battery_fully_charged",
         ),
         CyberPowerModbusBinarySensorDescription(
@@ -319,7 +316,7 @@ def get_binary_sensor_descriptions() -> list[CyberPowerModbusBinarySensorDescrip
         CyberPowerModbusBinarySensorDescription(
             key="runtime_low",
             name="Runtime Low",
-            device_class=BinarySensorDeviceClass.BATTERY,
+            device_class=BinarySensorDeviceClass.PROBLEM,
             register_key="runtime_low",
         ),
         CyberPowerModbusBinarySensorDescription(

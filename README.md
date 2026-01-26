@@ -9,6 +9,7 @@ A Home Assistant integration for monitoring CyberPower UPS devices via Modbus/TC
 - **SNMP metadata**: model, serial, firmware via UPS-MIB and CyberPower enterprise OIDs
 - **Local polling**: Modbus/TCP (port 502) + SNMP (port 161)
 - **Block read optimization** with fallback to individual reads
+- **Holding register polling** only (input registers are not supported on tested hardware)
 
 ## Installation
 
@@ -61,6 +62,7 @@ Device type (single/three-phase) is detected via SNMP (UPS-MIB input line count)
 
 - **SNMP not returning metadata**: verify SNMP is enabled and community is correct.
 - **Modbus connection errors**: confirm Modbus/TCP is enabled and port 502 is reachable.
+- **Illegal function / input register errors**: the UPS only supports Modbus holding registers (FC03).
 - Useful checks:
   - `ping <device-host>`
   - `nc -u <device-host> 161`

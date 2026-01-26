@@ -1,0 +1,118 @@
+# SPDX-License-Identifier: GPL-3.0
+# Copyright (C) 2026 Anthony Burow
+# https://github.com/aburow/cyberpower-modbus-ha
+
+"""CyberPower UPS Modbus integration entry point."""
+
+from __future__ import annotations
+
+import logging
+
+try:
+    import pymodbus
+    PYMODBUS_VERSION = pymodbus.__version__
+except (ImportError, AttributeError):
+    PYMODBUS_VERSION = "unknown"
+
+from pymodbus.client import ModbusTcpClient
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.const import CONF_HOST, CONF_PORT
+
+from .const import (
+    CONF_DEVICE_NAME,
+    CONF_SNMP_COMMUNITY,
+    CONF_UNIT,
+    DEFAULT_NAME,
+    DEFAULT_PORT,
+    DEFAULT_SNMP_COMMUNITY,
+    DEFAULT_UNIT,
+    DOMAIN,
+    KEY_CLIENT,
+    KEY_COORDINATOR,
+    SUPPORTED_PLATFORMS,
+)
+from .coordinator import CyberPowerModbusCoordinator
+from .device_types import CyberPowerDeviceType
+from .register_factory import get_registers_for_device
+from .snmp_helper import async_detect_device_type, async_get_device_metadata
+
+_LOGGER = logging.getLogger(__name__)
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up CyberPower Modbus from a config entry."""
+    _LOGGER.info("CyberPower UPS Modbus integration starting (pymodbus %s)", PYMODBUS_VERSION)
+    hass.data.setdefault(DOMAIN, {})
+
+    host = entry.data[CONF_HOST]
+    port = entry.data.get(CONF_PORT, DEFAULT_PORT)
+    unit = entry.data.get(CONF_UNIT, DEFAULT_UNIT)
+    device_name = entry.data.get(CONF_DEVICE_NAME, DEFAULT_NAME)
+    snmp_community = entry.data.get(CONF_SNMP_COMMUNITY, DEFAULT_SNMP_COMMUNITY)
+    # Create client with timeout to prevent hung connections
+    client = ModbusTcpClient(host=host, port=port, timeout=5)
+    connected = await hass.async_add_executor_job(client.connect)
+    if not connected:
+        raise ConfigEntryNotReady("Unable to connect to CyberPower UPS")
+
+    coordinator = CyberPowerModbusCoordinator(hass, client, unit, device_name)
+
+    # Query SNMP for device metadata (async, non-blocking)
+    try:
+        _LOGGER.debug("Querying SNMP metadata from %s", host)
+        metadata = await async_get_device_metadata(host, snmp_community)
+        if metadata and any([metadata.get("model"), metadata.get("serial_number"), metadata.get("firmware_version")]):
+            _LOGGER.info("SNMP metadata retrieved: model=%s, serial=%s", metadata.get("model"), metadata.get("serial_number"))
+            coordinator.set_device_metadata(
+                hw_model=metadata.get("model"),
+                serial_number=metadata.get("serial_number"),
+                fw_version=metadata.get("firmware_version"),
+                fw_date=metadata.get("firmware_date"),
+            )
+        else:
+            _LOGGER.debug("SNMP query returned empty metadata")
+    except Exception as err:
+        _LOGGER.warning("Failed to query SNMP metadata from %s: %s", host, err)
+        # Continue without metadata - Modbus sensors still work
+
+    # Detect device type via SNMP (fallback to single-phase)
+    try:
+        model_hint = coordinator.hw_model
+        device_type = await async_detect_device_type(host, snmp_community, model_hint)
+    except Exception as err:
+        _LOGGER.warning("Failed to detect device type from SNMP: %s", err)
+        device_type = CyberPowerDeviceType.SINGLE_PHASE
+
+    coordinator.set_device_type(device_type)
+
+    # Load registers for detected device type
+    registers, blocks, reg_map = get_registers_for_device(coordinator.device_type)
+    coordinator.set_registers(registers, blocks, reg_map)
+
+    try:
+        await coordinator.async_config_entry_first_refresh()
+    except Exception as err:
+        _LOGGER.error("Failed to fetch initial data from CyberPower device: %s", err)
+        raise ConfigEntryNotReady(f"Failed to fetch initial data: {err}") from err
+
+    hass.data[DOMAIN][entry.entry_id] = {
+        KEY_CLIENT: client,
+        KEY_COORDINATOR: coordinator,
+    }
+
+    await hass.config_entries.async_forward_entry_setups(entry, SUPPORTED_PLATFORMS)
+
+    return True
+
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Unload a CyberPower Modbus config entry."""
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, SUPPORTED_PLATFORMS)
+
+    if unload_ok:
+        data = hass.data[DOMAIN].pop(entry.entry_id)
+        await hass.async_add_executor_job(data[KEY_CLIENT].close)
+
+    return unload_ok

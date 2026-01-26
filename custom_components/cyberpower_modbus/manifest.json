@@ -1,0 +1,15 @@
+{
+  "domain": "cyberpower_modbus",
+  "name": "CyberPower UPS Modbus",
+  "version": "0.1.0",
+  "icon": "mdi:uninterruptible-power-supply",
+  "documentation": "https://github.com/aburow/cyberpower-modbus-ha",
+  "requirements": [
+    "pymodbus>=3.1.1"
+  ],
+  "dependencies": [],
+  "codeowners": ["@aburow"],
+  "config_flow": true,
+  "iot_class": "local_polling",
+  "quality_scale": "internal"
+}

@@ -1,14 +1,14 @@
 {
   "domain": "cyberpower_modbus",
   "name": "CyberPower UPS Modbus",
-  "version": "0.1.1",
+  "codeowners": ["@aburow"],
+  "config_flow": true,
+  "dependencies": [],
   "documentation": "https://github.com/aburow/cyberpower-modbus-ha",
+  "iot_class": "local_polling",
+  "quality_scale": "internal",
   "requirements": [
     "pymodbus>=3.1.1"
   ],
-  "dependencies": [],
-  "codeowners": ["@aburow"],
-  "config_flow": true,
-  "iot_class": "local_polling",
-  "quality_scale": "internal"
+  "version": "0.1.1"
 }

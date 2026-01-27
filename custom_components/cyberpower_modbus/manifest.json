@@ -2,7 +2,6 @@
   "domain": "cyberpower_modbus",
   "name": "CyberPower UPS Modbus",
   "version": "0.1.1",
-  "icon": "mdi:uninterruptible-power-supply",
   "documentation": "https://github.com/aburow/cyberpower-modbus-ha",
   "requirements": [
     "pymodbus>=3.1.1"

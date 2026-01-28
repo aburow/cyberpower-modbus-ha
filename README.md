@@ -1,8 +1,8 @@
 # CyberPower UPS Modbus Integration for Home Assistant
 
-[HACS](https://img.shields.io/badge/HACS-Default-orange.svg)
-![HACS Validation](https://github.com/aburow/cyberpower-modbus-ha/actions/workflows/hacs.yml/badge.svg)
-![Hassfest](https://github.com/aburow/cyberpower-modbus-ha/actions/workflows/hassfest.yml/badge.svg)
+[![HACS](https://img.shields.io/badge/HACS-Default-orange.svg)](https://hacs.xyz/)
+[![HACS Validation](https://github.com/aburow/cyberpower-modbus-ha/actions/workflows/validate.yml/badge.svg?branch=main)](https://github.com/aburow/cyberpower-modbus-ha/actions/workflows/validate.yml)
+[![Hassfest](https://github.com/aburow/cyberpower-modbus-ha/actions/workflows/hassfest.yml/badge.svg?branch=main)](https://github.com/aburow/cyberpower-modbus-ha/actions/workflows/hassfest.yml)
 
 A Home Assistant integration for monitoring CyberPower UPS devices via Modbus/TCP with SNMP-based metadata and device-type detection.
 

@@ -1,5 +1,9 @@
 # CyberPower UPS Modbus Integration for Home Assistant
 
+[HACS](https://img.shields.io/badge/HACS-Default-orange.svg)
+![HACS Validation](https://github.com/aburow/cyberpower-modbus-ha/actions/workflows/hacs.yml/badge.svg)
+![Hassfest](https://github.com/aburow/cyberpower-modbus-ha/actions/workflows/hassfest.yml/badge.svg)
+
 A Home Assistant integration for monitoring CyberPower UPS devices via Modbus/TCP with SNMP-based metadata and device-type detection.
 
 This custom-component does not require additional components such as NUT https://wiki.archlinux.org/title/Network_UPS_Tools

@@ -163,3 +163,15 @@ async def async_detect_device_type(
             _LOGGER.debug("Unexpected UPS input line count value: %s", line_count)
 
     return _detect_device_type_from_model(model_hint)
+
+
+def get_device_metadata_sync(host: str, community: str = "public") -> dict[str, Any]:
+    """Sync wrapper for SNMP metadata (safe to run in executor)."""
+    return asyncio.run(async_get_device_metadata(host, community))
+
+
+def detect_device_type_sync(
+    host: str, community: str = "public", model_hint: str | None = None
+) -> CyberPowerDeviceType:
+    """Sync wrapper for device type detection (safe to run in executor)."""
+    return asyncio.run(async_detect_device_type(host, community, model_hint))

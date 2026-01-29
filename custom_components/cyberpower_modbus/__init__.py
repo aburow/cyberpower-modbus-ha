@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 try:
@@ -29,14 +30,13 @@ from .const import (
     DEFAULT_SNMP_COMMUNITY,
     DEFAULT_UNIT,
     DOMAIN,
-    KEY_CLIENT,
     KEY_COORDINATOR,
     SUPPORTED_PLATFORMS,
 )
 from .coordinator import CyberPowerModbusCoordinator
 from .device_types import CyberPowerDeviceType
 from .register_factory import get_registers_for_device
-from .snmp_helper import async_detect_device_type, async_get_device_metadata
+from .snmp_helper import detect_device_type_sync, get_device_metadata_sync
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,18 +51,35 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unit = entry.data.get(CONF_UNIT, DEFAULT_UNIT)
     device_name = entry.data.get(CONF_DEVICE_NAME, DEFAULT_NAME)
     snmp_community = entry.data.get(CONF_SNMP_COMMUNITY, DEFAULT_SNMP_COMMUNITY)
-    # Create client with timeout to prevent hung connections
-    client = ModbusTcpClient(host=host, port=port, timeout=5)
+    locks = hass.data[DOMAIN].setdefault("locks", {})
+    lock_key = f"{host}:{port}"
+    io_lock = locks.setdefault(lock_key, asyncio.Lock())
+
+    def client_factory() -> ModbusTcpClient:
+        # Create client with timeout to prevent hung connections
+        return ModbusTcpClient(host=host, port=port, timeout=5)
+
+    client = client_factory()
     connected = await hass.async_add_executor_job(client.connect)
     if not connected:
         raise ConfigEntryNotReady("Unable to connect to CyberPower UPS")
 
-    coordinator = CyberPowerModbusCoordinator(hass, client, unit, device_name)
+    coordinator = CyberPowerModbusCoordinator(
+        hass,
+        client,
+        unit,
+        device_name,
+        host,
+        port,
+        entry.entry_id,
+        io_lock,
+        client_factory,
+    )
 
     # Query SNMP for device metadata (async, non-blocking)
     try:
         _LOGGER.debug("Querying SNMP metadata from %s", host)
-        metadata = await async_get_device_metadata(host, snmp_community)
+        metadata = await hass.async_add_executor_job(get_device_metadata_sync, host, snmp_community)
         if metadata and any([metadata.get("model"), metadata.get("serial_number"), metadata.get("firmware_version")]):
             _LOGGER.info("SNMP metadata retrieved: model=%s, serial=%s", metadata.get("model"), metadata.get("serial_number"))
             coordinator.set_device_metadata(
@@ -80,7 +97,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Detect device type via SNMP (fallback to single-phase)
     try:
         model_hint = coordinator.hw_model
-        device_type = await async_detect_device_type(host, snmp_community, model_hint)
+        device_type = await hass.async_add_executor_job(
+            detect_device_type_sync,
+            host,
+            snmp_community,
+            model_hint,
+        )
     except Exception as err:
         _LOGGER.warning("Failed to detect device type from SNMP: %s", err)
         device_type = CyberPowerDeviceType.SINGLE_PHASE
@@ -97,10 +119,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error("Failed to fetch initial data from CyberPower device: %s", err)
         raise ConfigEntryNotReady(f"Failed to fetch initial data: {err}") from err
 
-    hass.data[DOMAIN][entry.entry_id] = {
-        KEY_CLIENT: client,
-        KEY_COORDINATOR: coordinator,
-    }
+    hass.data[DOMAIN][entry.entry_id] = {KEY_COORDINATOR: coordinator}
 
     await hass.config_entries.async_forward_entry_setups(entry, SUPPORTED_PLATFORMS)
 
@@ -113,6 +132,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     if unload_ok:
         data = hass.data[DOMAIN].pop(entry.entry_id)
-        await hass.async_add_executor_job(data[KEY_CLIENT].close)
+        await data[KEY_COORDINATOR].async_close()
 
     return unload_ok

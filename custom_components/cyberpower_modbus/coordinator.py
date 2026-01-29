@@ -12,9 +12,11 @@ Note: pymodbus API compatibility
 
 from __future__ import annotations
 
+import asyncio
 import functools
 import logging
-from typing import Any
+import time
+from typing import Any, Callable
 
 from pymodbus.client import ModbusTcpClient
 from homeassistant.core import HomeAssistant
@@ -36,6 +38,11 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         client: ModbusTcpClient,
         unit: int,
         device_name: str,
+        host: str,
+        port: int,
+        entry_id: str,
+        io_lock: asyncio.Lock,
+        client_factory: Callable[[], ModbusTcpClient],
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
@@ -44,9 +51,17 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             name=DOMAIN,
             update_interval=SCAN_INTERVAL,
         )
-        self.client = client
+        self._client = client
+        self._client_factory = client_factory
+        self._io_lock = io_lock
+        self._host = host
+        self._port = port
+        self._entry_id = entry_id
         self.unit = unit
         self.device_name = device_name
+        self._device_context = (
+            f"{self.device_name} {self._host}:{self._port} unit {self.unit} entry {self._entry_id}"
+        )
         # Initialize data as empty dict to ensure it's always present
         self.data: dict[str, Any] = {}
         # Device metadata (populated via SNMP at startup)
@@ -60,6 +75,11 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.registers: list[dict[str, Any]] = registers_single_phase.REGISTERS
         self.register_blocks: list[dict[str, Any]] = registers_single_phase.REGISTER_BLOCKS
         self.register_map: dict[int, dict[str, Any]] = registers_single_phase.REGISTER_MAP
+        self._backoff_until: float | None = None
+        self._backoff_seconds: float = 0.0
+        self._backoff_max_seconds: float = 60.0
+        self._post_connect_delay: float = 0.05
+        self._inter_block_delay: float = 0.05
 
     def set_device_metadata(
         self,
@@ -74,16 +94,29 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.fw_version = fw_version
         self.fw_date = fw_date
         _LOGGER.debug(
-            "Device metadata set: model=%s, serial=%s, firmware=%s",
+            "Device metadata set: model=%s, serial=%s, firmware=%s [%s]",
             hw_model,
             serial_number,
             fw_version,
+            self._device_context,
         )
 
     def set_device_type(self, device_type: CyberPowerDeviceType) -> None:
         """Set the detected device type."""
         self.device_type = device_type
-        _LOGGER.info("Device type set to: %s", device_type.value)
+        if device_type == CyberPowerDeviceType.THREE_PHASE:
+            self._post_connect_delay = 0.1
+            self._inter_block_delay = 0.1
+        else:
+            self._post_connect_delay = 0.05
+            self._inter_block_delay = 0.05
+        _LOGGER.info(
+            "Device type set to: %s (post_connect_delay=%.0fms, inter_block_delay=%.0fms) [%s]",
+            device_type.value,
+            self._post_connect_delay * 1000,
+            self._inter_block_delay * 1000,
+            self._device_context,
+        )
 
     def set_registers(
         self,
@@ -95,8 +128,16 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.registers = registers
         self.register_blocks = register_blocks
         self.register_map = register_map
-        _LOGGER.debug("Registers updated: %d registers, %d blocks", len(registers), len(register_blocks))
+        _LOGGER.debug(
+            "Registers updated: %d registers, %d blocks [%s]",
+            len(registers),
+            len(register_blocks),
+            self._device_context,
+        )
 
+    async def async_close(self) -> None:
+        """Close the current Modbus client."""
+        await self._close_client()
 
     @staticmethod
     def _is_error_response(result) -> bool:
@@ -113,31 +154,74 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         data: dict[str, Any] = {}
         errors: list[str] = []
 
-        _LOGGER.debug("Starting update cycle")
+        now = time.monotonic()
+        if self._backoff_until and now < self._backoff_until:
+            remaining = self._backoff_until - now
+            raise UpdateFailed(f"Backoff active for {remaining:.1f}s")
 
-        # Try block reads first (optimized) with reconnection logic
-        _LOGGER.debug("Attempting block reads")
-        block_read_ok = await self._try_block_reads(data, errors)
-        _LOGGER.debug("Block reads result: %s (data keys: %s)", "success" if block_read_ok else "failed", list(data.keys()))
+        _LOGGER.debug("Starting update cycle [%s]", self._device_context)
 
-        # If block reads failed, fall back to individual reads with reconnection
-        if not block_read_ok:
-            _LOGGER.info("Block reads failed or incomplete, falling back to individual register reads")
-            # Don't clear data - preserve any partial data from successful block reads
-            await self._try_individual_reads(data, errors)
-            _LOGGER.debug("Individual reads fallback complete (data keys: %s)", list(data.keys()))
-            _LOGGER.debug("Individual reads fallback complete (data keys: %s)", list(data.keys()))
+        lock_start = time.monotonic()
+        async with self._io_lock:
+            lock_wait = time.monotonic() - lock_start
+            if lock_wait > 0:
+                _LOGGER.debug("Waited %.3fs for Modbus lock [%s]", lock_wait, self._device_context)
 
-        if not data:
-            raise UpdateFailed(f"Unable to read any registers: {', '.join(errors)}")
+            if not await self._connect_client():
+                self._apply_backoff()
+                raise UpdateFailed("Unable to connect to Modbus device")
 
-        if errors:
-            _LOGGER.debug("Failed to read %d registers: %s", len(errors), ", ".join(errors))
+            if self._post_connect_delay:
+                await asyncio.sleep(self._post_connect_delay)
 
-        # Log successful data keys for debugging
-        _LOGGER.debug("Successfully read %d registers: %s", len(data), ", ".join(sorted(data.keys())))
+            try:
+                # Try block reads first (optimized) with reconnection logic
+                _LOGGER.debug("Attempting block reads [%s]", self._device_context)
+                block_read_ok = await self._try_block_reads(data, errors)
+                _LOGGER.debug(
+                    "Block reads result: %s (data keys: %s) [%s]",
+                    "success" if block_read_ok else "failed",
+                    list(data.keys()),
+                    self._device_context,
+                )
 
-        return data
+                # If block reads failed, fall back to individual reads with reconnection
+                if not block_read_ok:
+                    _LOGGER.info(
+                        "Block reads failed or incomplete, falling back to individual register reads [%s]",
+                        self._device_context,
+                    )
+                    # Don't clear data - preserve any partial data from successful block reads
+                    await self._try_individual_reads(data, errors)
+                    _LOGGER.debug(
+                        "Individual reads fallback complete (data keys: %s) [%s]",
+                        list(data.keys()),
+                        self._device_context,
+                    )
+
+                if not data:
+                    self._apply_backoff()
+                    raise UpdateFailed(f"Unable to read any registers: {', '.join(errors)}")
+
+                if errors:
+                    _LOGGER.debug(
+                        "Failed to read %d registers: %s [%s]",
+                        len(errors),
+                        ", ".join(errors),
+                        self._device_context,
+                    )
+
+                # Log successful data keys for debugging
+                _LOGGER.debug(
+                    "Successfully read %d registers: %s [%s]",
+                    len(data),
+                    ", ".join(sorted(data.keys())),
+                    self._device_context,
+                )
+                self._reset_backoff()
+                return data
+            finally:
+                await self._close_client()
 
     async def _try_block_reads(self, data: dict[str, Any], errors: list[str]) -> bool:
         """Try to read data using block reads. Returns True if any blocks succeed, False if all fail."""
@@ -145,32 +229,48 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         for block in self.register_blocks:
             try:
-                _LOGGER.debug("Reading block %s (addr 0x%04X, count %d)", block["name"], block["start_address"], block["count"])
+                _LOGGER.debug(
+                    "Reading block %s (addr 0x%04X, count %d) [%s]",
+                    block["name"],
+                    block["start_address"],
+                    block["count"],
+                    self._device_context,
+                )
+                block_start = time.monotonic()
                 read_request = functools.partial(
-                    self.client.read_holding_registers,
+                    self._client.read_holding_registers,
                     block["start_address"],
                     count=block["count"],
                     device_id=self.unit,
                 )
                 result = await self.hass.async_add_executor_job(read_request)
+                block_duration = time.monotonic() - block_start
 
                 # Check if result is an error
                 if self._is_error_response(result):
                     _LOGGER.warning(
-                        "Block read returned error %s (0x%04X, %d registers): %s",
+                        "Block read returned error %s (0x%04X, %d registers): %s [%s]",
                         block["name"],
                         block["start_address"],
                         block["count"],
                         result,
+                        self._device_context,
                     )
                     # Mark all registers in this block as failed, but continue to next block
                     for addr in block["registers"]:
                         if addr in self.register_map:
                             errors.append(self.register_map[addr]["key"])
+                    if self._inter_block_delay:
+                        await asyncio.sleep(self._inter_block_delay)
                     continue
 
                 # Block read successful, increment counter
-                _LOGGER.debug("Block read succeeded: %s", block["name"])
+                _LOGGER.debug(
+                    "Block read succeeded: %s (%.1fms) [%s]",
+                    block["name"],
+                    block_duration * 1000,
+                    self._device_context,
+                )
                 block_success_count += 1
 
                 # Decode each register in the block
@@ -185,9 +285,10 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
                     if len(reg_slice) < reg_count:
                         _LOGGER.debug(
-                            "Insufficient registers for %s at offset %d",
+                            "Insufficient registers for %s at offset %d [%s]",
                             descriptor["key"],
                             offset,
+                            self._device_context,
                         )
                         errors.append(descriptor["key"])
                         continue
@@ -199,30 +300,34 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     except Exception as err:
                         errors.append(descriptor["key"])
                         _LOGGER.debug(
-                            "Error decoding register %s: %s",
+                            "Error decoding register %s: %s [%s]",
                             descriptor["key"],
                             err,
+                            self._device_context,
                         )
 
             except Exception as err:
-                _LOGGER.warning("Exception in block read %s: %s (type: %s)", block["name"], err, type(err).__name__)
+                _LOGGER.warning(
+                    "Exception in block read %s: %s (type: %s) [%s]",
+                    block["name"],
+                    err,
+                    type(err).__name__,
+                    self._device_context,
+                )
 
                 # Try to reconnect on connection errors (same as individual reads)
-                err_str = str(err).lower()
-                if "broken pipe" in err_str or "connection" in err_str or "reset" in err_str:
-                    _LOGGER.debug("Connection error in block read, attempting to reconnect and retry")
+                if self._is_connection_error(err):
+                    _LOGGER.debug(
+                        "Connection error in block read, attempting to reconnect and retry [%s]",
+                        self._device_context,
+                    )
                     try:
-                        # Close existing connection
-                        close_request = functools.partial(self.client.close)
-                        await self.hass.async_add_executor_job(close_request)
-
-                        # Reconnect
-                        connect_request = functools.partial(self.client.connect)
-                        await self.hass.async_add_executor_job(connect_request)
+                        if not await self._rebuild_and_connect():
+                            raise RuntimeError("Reconnect failed")
 
                         # Retry the block read
                         read_request = functools.partial(
-                            self.client.read_holding_registers,
+                            self._client.read_holding_registers,
                             block["start_address"],
                             count=block["count"],
                             device_id=self.unit,
@@ -230,7 +335,11 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         result = await self.hass.async_add_executor_job(read_request)
 
                         if not self._is_error_response(result):
-                            _LOGGER.debug("Block read succeeded after reconnect: %s", block["name"])
+                            _LOGGER.debug(
+                                "Block read succeeded after reconnect: %s [%s]",
+                                block["name"],
+                                self._device_context,
+                            )
                             block_success_count += 1
                             # Decode the registers from this successful block
                             for addr in block["registers"]:
@@ -252,15 +361,27 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                                         data[descriptor["key"]] = value
                                 except Exception as decode_err:
                                     errors.append(descriptor["key"])
-                                    _LOGGER.debug("Error decoding register %s: %s", descriptor["key"], decode_err)
+                                    _LOGGER.debug(
+                                        "Error decoding register %s: %s [%s]",
+                                        descriptor["key"],
+                                        decode_err,
+                                        self._device_context,
+                                    )
                             continue  # Skip the error marking below
                     except Exception as reconnect_err:
-                        _LOGGER.debug("Failed to reconnect and retry block: %s", reconnect_err)
+                        _LOGGER.debug(
+                            "Failed to reconnect and retry block: %s [%s]",
+                            reconnect_err,
+                            self._device_context,
+                        )
 
                 # Mark all registers in this block as failed
                 for addr in block["registers"]:
                     if addr in self.register_map:
                         errors.append(self.register_map[addr]["key"])
+            finally:
+                if self._inter_block_delay:
+                    await asyncio.sleep(self._inter_block_delay)
 
         # Return True if at least one block succeeded
         return block_success_count > 0
@@ -281,7 +402,10 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
                     # If too many consecutive failures, abort
                     if consecutive_failures >= 5:
-                        _LOGGER.warning("Too many consecutive read failures, aborting update cycle")
+                        _LOGGER.warning(
+                            "Too many consecutive read failures, aborting update cycle [%s]",
+                            self._device_context,
+                        )
                         break
                     continue
 
@@ -292,10 +416,11 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if self._is_error_response(result):
                     errors.append(descriptor["key"])
                     _LOGGER.debug(
-                        "Failed to read register %s (address 0x%04X): %s",
+                        "Failed to read register %s (address 0x%04X): %s [%s]",
                         descriptor["key"],
                         descriptor["address"],
                         result,
+                        self._device_context,
                     )
                     continue
 
@@ -306,22 +431,29 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 errors.append(descriptor["key"])
                 consecutive_failures += 1
                 _LOGGER.debug(
-                    "Exception reading register %s (address 0x%04X): %s",
+                    "Exception reading register %s (address 0x%04X): %s [%s]",
                     descriptor["key"],
                     descriptor["address"],
                     err,
+                    self._device_context,
                 )
 
                 if consecutive_failures >= 5:
-                    _LOGGER.warning("Too many consecutive read failures, aborting update cycle")
+                    _LOGGER.warning(
+                        "Too many consecutive read failures, aborting update cycle [%s]",
+                        self._device_context,
+                    )
                     break
+            finally:
+                if self._inter_block_delay:
+                    await asyncio.sleep(self._inter_block_delay)
 
     async def _read_register_with_reconnect(self, descriptor: dict[str, Any]):
         """Read a register with automatic reconnection on failure."""
         # Attempt read with current connection
         try:
             read_request = functools.partial(
-                self.client.read_holding_registers,
+                self._client.read_holding_registers,
                 descriptor["address"],
                 count=descriptor["count"],
                 device_id=self.unit,
@@ -330,47 +462,104 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             return result
         except Exception as err:
             # Connection likely dropped, attempt to reconnect and retry
-            err_str = str(err).lower()
-            _LOGGER.debug("Read error for %s (address 0x%04X): %s (type: %s)", descriptor["key"], descriptor["address"], err, type(err).__name__)
+            _LOGGER.debug(
+                "Read error for %s (address 0x%04X): %s (type: %s) [%s]",
+                descriptor["key"],
+                descriptor["address"],
+                err,
+                type(err).__name__,
+                self._device_context,
+            )
 
-            if "broken pipe" in err_str or "connection" in err_str or "reset" in err_str:
+            if self._is_connection_error(err):
                 _LOGGER.debug(
-                    "Connection error detected, attempting reconnect for %s",
+                    "Connection error detected, attempting reconnect for %s [%s]",
                     descriptor["key"],
+                    self._device_context,
                 )
 
-                try:
-                    # Close existing connection
-                    close_request = functools.partial(self.client.close)
-                    await self.hass.async_add_executor_job(close_request)
-                except Exception:
-                    pass  # Ignore close errors
+                if not await self._rebuild_and_connect():
+                    return None
 
                 try:
-                    # Reconnect
-                    connect_request = functools.partial(self.client.connect)
-                    await self.hass.async_add_executor_job(connect_request)
-
                     # Retry the read
                     read_request = functools.partial(
-                        self.client.read_holding_registers,
+                        self._client.read_holding_registers,
                         descriptor["address"],
                         count=descriptor["count"],
                         device_id=self.unit,
                     )
                     result = await self.hass.async_add_executor_job(read_request)
-                    _LOGGER.debug("Successfully reconnected and read register %s", descriptor["key"])
+                    _LOGGER.debug(
+                        "Successfully reconnected and read register %s [%s]",
+                        descriptor["key"],
+                        self._device_context,
+                    )
                     return result
                 except Exception as reconnect_err:
                     _LOGGER.debug(
-                        "Failed to reconnect and read register %s: %s",
+                        "Failed to reconnect and read register %s: %s [%s]",
                         descriptor["key"],
                         reconnect_err,
+                        self._device_context,
                     )
                     return None
             else:
                 # Not a connection error, re-raise
                 raise
+
+    async def _connect_client(self) -> bool:
+        """Connect the Modbus client for this update cycle."""
+        start = time.monotonic()
+        connect_request = functools.partial(self._client.connect)
+        connected = await self.hass.async_add_executor_job(connect_request)
+        duration = (time.monotonic() - start) * 1000
+        _LOGGER.debug(
+            "Modbus connect %s in %.1fms [%s]",
+            "ok" if connected else "failed",
+            duration,
+            self._device_context,
+        )
+        return connected
+
+    async def _close_client(self) -> None:
+        """Close the Modbus client."""
+        start = time.monotonic()
+        close_request = functools.partial(self._client.close)
+        await self.hass.async_add_executor_job(close_request)
+        duration = (time.monotonic() - start) * 1000
+        _LOGGER.debug("Modbus close completed in %.1fms [%s]", duration, self._device_context)
+
+    async def _rebuild_and_connect(self) -> bool:
+        """Rebuild the Modbus client after socket errors and reconnect."""
+        await self._close_client()
+        self._client = self._client_factory()
+        connected = await self._connect_client()
+        if connected and self._post_connect_delay:
+            await asyncio.sleep(self._post_connect_delay)
+        return connected
+
+    def _is_connection_error(self, err: Exception) -> bool:
+        err_str = str(err).lower()
+        return "broken pipe" in err_str or "connection" in err_str or "reset" in err_str
+
+    def _apply_backoff(self) -> None:
+        if self._backoff_seconds <= 0:
+            self._backoff_seconds = 5.0
+        else:
+            self._backoff_seconds = min(self._backoff_max_seconds, self._backoff_seconds * 2)
+        self._backoff_until = time.monotonic() + self._backoff_seconds
+        _LOGGER.warning(
+            "Applying backoff: %.0fs [%s]",
+            self._backoff_seconds,
+            self._device_context,
+        )
+
+    def _reset_backoff(self) -> None:
+        if self._backoff_seconds or self._backoff_until:
+            _LOGGER.debug("Backoff reset [%s]", self._device_context)
+        self._backoff_seconds = 0.0
+        self._backoff_until = None
 
     def _decode_register(
         self, registers: list[int], descriptor: dict[str, Any]

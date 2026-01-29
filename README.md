@@ -18,7 +18,39 @@ this purpose.
 - **SNMP metadata**: model, serial, firmware via UPS-MIB and CyberPower enterprise OIDs
 - **Local polling**: Modbus/TCP (port 502) + SNMP (port 161)
 - **Block read optimization** with fallback to individual reads
+- **Per-endpoint Modbus locking** to serialize I/O to the same device
+- **Per-cycle connect/close** with reconnection and backoff handling
+- **Pacing delays** for devices that require slower read cadence
 - **Holding register polling** only (input registers are not supported on tested hardware)
+
+## Architecture
+
+```
+                         +-----------------------+
+                         |   Home Assistant UI   |
+                         +-----------+-----------+
+                                     |
+                                     v
+                         +-----------+-----------+
+                         |   DataUpdateCoordinator|
+                         |  (cyberpower_modbus)  |
+                         +-----------+-----------+
+                                     |
+                     +---------------+---------------+
+                     |                               |
+                     v                               v
+          +----------+----------+         +----------+----------+
+          |  Modbus/TCP Client  |         |   SNMP (metadata)   |
+          |  - per-cycle conn   |         |  UPS-MIB + CP OIDs  |
+          |  - lock per device  |         +----------+----------+
+          |  - block reads      |                    |
+          +----------+----------+                    |
+                     |                               |
+                     v                               v
+          +----------+----------+         +----------+----------+
+          |   CyberPower UPS    |         |   Model/Serial/FW   |
+          +---------------------+         +---------------------+
+```
 
 ## Installation
 
@@ -76,6 +108,25 @@ Device type (single/three-phase) is detected via SNMP (UPS-MIB input line count)
   - `ping <device-host>`
   - `nc -u <device-host> 161`
   - `telnet <device-host> 502`
+
+### Debug logging
+
+Add this to `configuration.yaml` to enable debug logs:
+
+```yaml
+logger:
+  default: info
+  logs:
+    custom_components.cyberpower_modbus: debug
+```
+
+Useful debug entries to expect:
+- `Modbus connect ok/failed in Xms`
+- `Modbus close completed in Xms`
+- `Waited X.XXXs for Modbus lock`
+- `Block read succeeded: <block>`
+- `Block read returned error <block>`
+- `Applying backoff: <seconds>`
 
 ## License
 

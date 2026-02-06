@@ -28,9 +28,9 @@ this purpose.
 ```mermaid
 flowchart TB
   UI["Home Assistant UI"]
-  COORD["DataUpdateCoordinator\n(cyberpower_modbus)"]
-  MODBUS["Modbus/TCP Client\n- per-cycle conn\n- lock per device\n- block reads"]
-  SNMP["SNMP (metadata)\nUPS-MIB + CP OIDs"]
+  COORD["DataUpdateCoordinator<br/>(cyberpower_modbus)"]
+  MODBUS["Modbus/TCP Client<br/>- per-cycle conn<br/>- lock per device<br/>- block reads"]
+  SNMP["SNMP (metadata)<br/>UPS-MIB + CP OIDs"]
   UPS["CyberPower UPS"]
   META["Model/Serial/FW"]
 

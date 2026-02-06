@@ -1,7 +1,7 @@
 # CyberPower UPS Modbus Integration for Home Assistant
 
 [![HACS](https://img.shields.io/badge/HACS-Default-orange.svg)](https://hacs.xyz/)
-[![HACS Validation](https://github.com/aburow/cyberpower-modbus-ha/actions/workflows/validate.yml/badge.svg?branch=main)](https://github.com/aburow/cyberpower-modbus-ha/actions/workflows/validate.yml)
+[![HACS Validation](https://github.com/aburow/cyberpower-modbus-ha/actions/workflows/hacs.yaml/badge.svg?branch=main)](https://github.com/aburow/cyberpower-modbus-ha/actions/workflows/hacs.yaml)
 [![Hassfest](https://github.com/aburow/cyberpower-modbus-ha/actions/workflows/hassfest.yaml/badge.svg?branch=main)](https://github.com/aburow/cyberpower-modbus-ha/actions/workflows/hassfest.yaml)
 
 A Home Assistant integration for monitoring CyberPower UPS devices via Modbus/TCP with SNMP-based metadata and device-type detection.
@@ -25,31 +25,20 @@ this purpose.
 
 ## Architecture
 
-```
-                         +-----------------------+
-                         |   Home Assistant UI   |
-                         +-----------+-----------+
-                                     |
-                                     v
-                         +-----------+-----------+
-                         |   DataUpdateCoordinator|
-                         |  (cyberpower_modbus)  |
-                         +-----------+-----------+
-                                     |
-                     +---------------+---------------+
-                     |                               |
-                     v                               v
-          +----------+----------+         +----------+----------+
-          |  Modbus/TCP Client  |         |   SNMP (metadata)   |
-          |  - per-cycle conn   |         |  UPS-MIB + CP OIDs  |
-          |  - lock per device  |         +----------+----------+
-          |  - block reads      |                    |
-          +----------+----------+                    |
-                     |                               |
-                     v                               v
-          +----------+----------+         +----------+----------+
-          |   CyberPower UPS    |         |   Model/Serial/FW   |
-          +---------------------+         +---------------------+
+```mermaid
+flowchart TB
+  UI["Home Assistant UI"]
+  COORD["DataUpdateCoordinator\n(cyberpower_modbus)"]
+  MODBUS["Modbus/TCP Client\n- per-cycle conn\n- lock per device\n- block reads"]
+  SNMP["SNMP (metadata)\nUPS-MIB + CP OIDs"]
+  UPS["CyberPower UPS"]
+  META["Model/Serial/FW"]
+
+  UI --> COORD
+  COORD --> MODBUS
+  COORD --> SNMP
+  MODBUS --> UPS
+  SNMP --> META
 ```
 
 ## Installation

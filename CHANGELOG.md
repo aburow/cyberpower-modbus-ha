@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.0
+- Promote to 1.0.0 release.
+
 ## 0.4.0
 - Serialize Modbus I/O per device endpoint with a shared lock.
 - Connect and close per update cycle; rebuild client on socket errors.

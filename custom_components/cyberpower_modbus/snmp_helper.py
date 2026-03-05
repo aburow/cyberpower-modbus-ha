@@ -10,6 +10,7 @@ import asyncio
 import logging
 from typing import Any
 
+from pysnmp.error import PySnmpError
 from pysnmp.hlapi.v3arch.asyncio import (
     CommunityData,
     ContextData,
@@ -81,7 +82,7 @@ async def async_get_snmp_value(
     except asyncio.TimeoutError:
         _LOGGER.warning("SNMP query to %s timed out after %ds for OID %s", host, timeout, oid)
         return None
-    except Exception as err:
+    except (PySnmpError, OSError, RuntimeError, ValueError) as err:
         _LOGGER.debug("SNMP query failed for %s (OID %s): %s (%s)", host, oid, err, type(err).__name__)
         return None
 

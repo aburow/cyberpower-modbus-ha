@@ -1,7 +1,7 @@
 # Changelog
 
 ## 1.0.0
-- Promote to 1.0.0 release.
+Promote to 1.0.0 release.
 
 ## 0.4.0
 - Serialize Modbus I/O per device endpoint with a shared lock.

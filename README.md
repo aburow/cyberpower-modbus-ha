@@ -117,6 +117,4 @@ Useful debug entries to expect:
 - `Block read returned error <block>`
 - `Applying backoff: <seconds>`
 
-## License
-
-See LICENSE file for details.
+License: see `LICENSE` for details.

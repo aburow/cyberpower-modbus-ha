@@ -1,0 +1,20 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff
+        name: ruff
+        entry: scripts/run-ruff.sh
+        language: script
+        types_or: [python]
+
+      - id: semgrep
+        name: semgrep
+        entry: scripts/run-semgrep.sh
+        language: script
+        types_or: [python]
+
+      - id: grain
+        name: grain
+        entry: scripts/run-grain.sh
+        language: script
+        files: \.(py|md)$

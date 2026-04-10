@@ -19,6 +19,7 @@ import time
 from typing import Any, Callable
 
 from pymodbus.client import ModbusTcpClient
+from pymodbus.exceptions import ModbusException
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -69,7 +70,7 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.serial_number: str | None = None
         self.fw_version: str | None = None
         self.fw_date: str | None = None
-        # Device type (single-phase or three-phase)
+        # Default to single-phase; may be updated via SNMP detection.
         self.device_type: CyberPowerDeviceType = CyberPowerDeviceType.SINGLE_PHASE
         # Registers and blocks (loaded from factory based on device type)
         self.registers: list[dict[str, Any]] = registers_single_phase.REGISTERS
@@ -102,7 +103,7 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
 
     def set_device_type(self, device_type: CyberPowerDeviceType) -> None:
-        """Set the detected device type."""
+        """Update device type and adjust read timing."""
         self.device_type = device_type
         if device_type == CyberPowerDeviceType.THREE_PHASE:
             self._post_connect_delay = 0.1
@@ -297,7 +298,7 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         value = self._decode_register(reg_slice, descriptor)
                         if value is not None:
                             data[descriptor["key"]] = value
-                    except Exception as err:
+                    except (ValueError, TypeError, IndexError) as err:
                         errors.append(descriptor["key"])
                         _LOGGER.debug(
                             "Error decoding register %s: %s [%s]",
@@ -306,7 +307,7 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                             self._device_context,
                         )
 
-            except Exception as err:
+            except (ModbusException, OSError, RuntimeError) as err:
                 _LOGGER.warning(
                     "Exception in block read %s: %s (type: %s) [%s]",
                     block["name"],
@@ -359,7 +360,7 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                                     value = self._decode_register(reg_slice, descriptor)
                                     if value is not None:
                                         data[descriptor["key"]] = value
-                                except Exception as decode_err:
+                                except (ValueError, TypeError, IndexError) as decode_err:
                                     errors.append(descriptor["key"])
                                     _LOGGER.debug(
                                         "Error decoding register %s: %s [%s]",
@@ -368,7 +369,7 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                                         self._device_context,
                                     )
                             continue  # Skip the error marking below
-                    except Exception as reconnect_err:
+                    except (ModbusException, OSError, RuntimeError) as reconnect_err:
                         _LOGGER.debug(
                             "Failed to reconnect and retry block: %s [%s]",
                             reconnect_err,
@@ -427,7 +428,7 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 value = self._decode_register(result.registers, descriptor)
                 if value is not None:
                     data[descriptor["key"]] = value
-            except Exception as err:
+            except (ModbusException, OSError, RuntimeError, ValueError, TypeError, IndexError) as err:
                 errors.append(descriptor["key"])
                 consecutive_failures += 1
                 _LOGGER.debug(
@@ -460,7 +461,7 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             )
             result = await self.hass.async_add_executor_job(read_request)
             return result
-        except Exception as err:
+        except (ModbusException, OSError, RuntimeError) as err:
             # Connection likely dropped, attempt to reconnect and retry
             _LOGGER.debug(
                 "Read error for %s (address 0x%04X): %s (type: %s) [%s]",
@@ -496,7 +497,7 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         self._device_context,
                     )
                     return result
-                except Exception as reconnect_err:
+                except (ModbusException, OSError, RuntimeError) as reconnect_err:
                     _LOGGER.debug(
                         "Failed to reconnect and read register %s: %s [%s]",
                         descriptor["key"],

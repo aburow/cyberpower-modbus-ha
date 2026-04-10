@@ -90,7 +90,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
         else:
             _LOGGER.debug("SNMP query returned empty metadata")
-    except Exception as err:
+    except (OSError, RuntimeError, ValueError) as err:
         _LOGGER.warning("Failed to query SNMP metadata from %s: %s", host, err)
         # Continue without metadata - Modbus sensors still work
 
@@ -103,7 +103,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             snmp_community,
             model_hint,
         )
-    except Exception as err:
+    except (OSError, RuntimeError, ValueError) as err:
         _LOGGER.warning("Failed to detect device type from SNMP: %s", err)
         device_type = CyberPowerDeviceType.SINGLE_PHASE
 

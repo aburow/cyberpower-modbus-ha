@@ -22,7 +22,7 @@ from .const import (
 )
 from .coordinator import CyberPowerModbusCoordinator
 from .device_types import CyberPowerDeviceType
-from .icons import resolve_binary_sensor_icon
+from .icons_unified import resolve_binary_sensor_icon
 
 _LOGGER = logging.getLogger(__name__)
 

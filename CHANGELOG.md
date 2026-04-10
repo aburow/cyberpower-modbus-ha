@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1-dev.1
+- Replace local icon mappings with the shared `icons_unified.py` canonical module used across UPS projects.
+- Keep deterministic `mdi:` icon resolution through shared `resolve_sensor_icon` and `resolve_binary_sensor_icon`.
+
 ## 1.1.0
 - Add deterministic `mdi:` icon mapping for sensor and binary sensor entities.
 - Apply explicit icon assignment at entity construction to avoid frontend fallback icon heuristics.

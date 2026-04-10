@@ -22,6 +22,7 @@ this purpose.
 - **Per-cycle connect/close** with reconnection and backoff handling
 - **Pacing delays** for devices that require slower read cadence
 - **Holding register polling** only (input registers are not supported on tested hardware)
+- **Unified icon resolver** shared with related UPS projects for consistent `mdi:` mapping
 
 ## Architecture
 

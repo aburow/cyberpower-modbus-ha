@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0-dev.1
+- Add deterministic `mdi:` icon mapping for sensor and binary sensor entities.
+- Apply explicit icon assignment at entity construction to avoid frontend fallback icon heuristics.
+- Add local pre-commit lint hooks for `ruff`, `semgrep`, and `grain`.
+
 ## 1.0.0
 Promote to 1.0.0 release.
 

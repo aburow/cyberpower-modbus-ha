@@ -88,6 +88,12 @@ Device type (single/three-phase) is detected via SNMP (UPS-MIB input line count)
 - Single-phase register mapping is validated against a live CyberPower device.
 - Three-phase register mapping is included but **untested**; treat as experimental.
 
+## Development Checks
+
+- Local `pre-commit` hooks run `ruff`, `semgrep`, and `grain`.
+- Install once: `uvx --from pre-commit pre-commit install`
+- Run manually: `uvx --from pre-commit pre-commit run --all-files`
+
 ## Troubleshooting
 
 - **SNMP not returning metadata**: verify SNMP is enabled and community is correct.

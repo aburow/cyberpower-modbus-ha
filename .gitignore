@@ -1,1 +1,15 @@
 localonly/
+__pycache__/
+*.pyc
+.codex
+
+# Semgrep local artifacts
+.semgrep/
+.semgrep_logs/
+semgrep.sarif
+semgrep-*.sarif
+
+# Grain local artifacts
+.grain/
+.grain-cache/
+.grain_cache/

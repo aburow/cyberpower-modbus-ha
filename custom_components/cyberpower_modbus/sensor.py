@@ -23,6 +23,7 @@ from .const import (
 from .coordinator import CyberPowerModbusCoordinator
 from .device_types import CyberPowerDeviceType
 from .icons_unified import resolve_sensor_icon
+from .sensor_availability_unified import is_sensor_enabled_by_default
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,6 +60,10 @@ class CyberPowerModbusSensor(CoordinatorEntity, SensorEntity):
         self.entity_description = description
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_{description.key}"
         self._attr_icon = resolve_sensor_icon(description.register_key)
+        self._attr_entity_registry_enabled_default = is_sensor_enabled_by_default(
+            description.register_key,
+            coordinator.device_type.value,
+        )
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},
             name=coordinator.device_name,

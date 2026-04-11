@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1-dev.2
+- Add shared `sensor_availability_unified.py` template for dependency-free, cross-project default availability behavior.
+- Keep full block polling unchanged while setting non-core entities to disabled-by-default in the Entity Registry.
+- Default-enable a minimal CyberPower core set (runtime, battery state of charge, input/output voltage, output load, online and on-battery state).
+
 ## 1.1.1-dev.1
 - Replace local icon mappings with the shared `icons_unified.py` canonical module used across UPS projects.
 - Keep deterministic `mdi:` icon resolution through shared `resolve_sensor_icon` and `resolve_binary_sensor_icon`.

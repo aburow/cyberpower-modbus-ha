@@ -23,6 +23,7 @@ from .const import (
 from .coordinator import CyberPowerModbusCoordinator
 from .device_types import CyberPowerDeviceType
 from .icons_unified import resolve_binary_sensor_icon
+from .sensor_availability_unified import is_binary_sensor_enabled_by_default
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,6 +60,12 @@ class CyberPowerModbusBinarySensor(CoordinatorEntity, BinarySensorEntity):
         self.entity_description = description
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_{description.key}"
         self._attr_icon = resolve_binary_sensor_icon(description.register_key)
+        self._attr_entity_registry_enabled_default = (
+            is_binary_sensor_enabled_by_default(
+                description.register_key,
+                coordinator.device_type.value,
+            )
+        )
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},
             name=coordinator.device_name,

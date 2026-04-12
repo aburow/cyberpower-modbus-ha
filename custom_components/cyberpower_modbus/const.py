@@ -23,7 +23,7 @@ CONF_SNMP_COMMUNITY = "snmp_community"
 KEY_CLIENT = "modbus_client"
 KEY_COORDINATOR = "coordinator"
 
-SUPPORTED_PLATFORMS = ["sensor", "binary_sensor"]
+SUPPORTED_PLATFORMS = ["sensor", "binary_sensor", "button"]
 
 
 @dataclass

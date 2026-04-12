@@ -69,3 +69,16 @@ def is_binary_sensor_enabled_by_default(local_key: str, device_family: str) -> b
         return True
     canonical_key = resolve_binary_canonical_key(local_key)
     return canonical_key in STANDARD_ENABLED_CANONICAL_SET
+
+
+def entity_enabled_default(local_entity_key: str) -> bool:
+    """Return whether this entity key should be enabled by default.
+
+    This external API is consumed by ups-docker-ha without device-family context.
+    """
+    try:
+        if resolve_sensor_canonical_key(local_entity_key) is not None:
+            return is_sensor_enabled_by_default(local_entity_key, "unknown")
+        return is_binary_sensor_enabled_by_default(local_entity_key, "unknown")
+    except (AttributeError, TypeError, ValueError):
+        return True

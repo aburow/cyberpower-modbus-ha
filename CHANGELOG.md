@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.1-dev.4
+- Add a `Set or Reset Monitors` button entity to apply monitoring defaults in bulk per UPS entry.
+- Button action enables core/default entities and disables non-core entities through the HA Entity Registry.
+- Keep full block polling and device detection logic unchanged.
+
+## 1.1.1-dev.3
+- Add `entity_enabled_default(local_entity_key: str) -> bool` to `sensor_availability_unified.py` for ups-docker-ha compatibility.
+- Keep module import-safe outside Home Assistant and preserve existing in-integration availability behavior.
+
 ## 1.1.1-dev.2
 - Add shared `sensor_availability_unified.py` template for dependency-free, cross-project default availability behavior.
 - Keep full block polling unchanged while setting non-core entities to disabled-by-default in the Entity Registry.

@@ -24,6 +24,7 @@ this purpose.
 - **Holding register polling** only (input registers are not supported on tested hardware)
 - **Unified icon resolver** shared with related UPS projects for consistent `mdi:` mapping
 - **Default-enabled minimal core entities** with non-core sensors/binary sensors opt-in via Entity Registry
+- **Set or Reset Monitors button** to bulk-apply default monitoring per configured UPS
 
 ## Architecture
 

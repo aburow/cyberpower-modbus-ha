@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1-dev.5
+- Add `device_info_unified.py` with `resolve_device_info(values, source)` for ups-docker-ha bridge compatibility.
+- Add `CONTRACT_VERSION = "1.0"` and canonical-key-only normalization behavior for bridge-consumable device metadata.
+- Add acceptance tests for import safety, key/value constraints, malformed input handling, and deterministic mapping behavior.
+
 ## 1.1.1-dev.4
 - Add a `Set or Reset Monitors` button entity to apply monitoring defaults in bulk per UPS entry.
 - Button action enables core/default entities and disables non-core entities through the HA Entity Registry.

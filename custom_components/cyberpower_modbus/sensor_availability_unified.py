@@ -80,5 +80,5 @@ def entity_enabled_default(local_entity_key: str) -> bool:
         if resolve_sensor_canonical_key(local_entity_key) is not None:
             return is_sensor_enabled_by_default(local_entity_key, "unknown")
         return is_binary_sensor_enabled_by_default(local_entity_key, "unknown")
-    except (AttributeError, TypeError, ValueError):
+    except (AttributeError, KeyError, TypeError, ValueError):
         return True

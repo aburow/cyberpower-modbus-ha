@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1-dev.6
+- Add `capability_profile_unified.py` with `contract_version`/`CONTRACT_VERSION` set to `2.0.0` and modbus v2 capability profiles (poll groups + block optimization hints).
+- Align unified interface contracts for bridge runtime loading (`icons_unified.py`, `sensor_availability_unified.py`, `device_info_unified.py`) with never-raise behavior.
+- Add interop contract tests for plain-Python imports, runtime interface safety, canonical device-info output constraints, and capability profile validation rules.
+
 ## 1.1.1-dev.5
 - Add `device_info_unified.py` with `resolve_device_info(values, source)` for ups-docker-ha bridge compatibility.
 - Add `CONTRACT_VERSION = "1.0"` and canonical-key-only normalization behavior for bridge-consumable device metadata.

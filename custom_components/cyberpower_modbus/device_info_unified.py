@@ -51,7 +51,9 @@ def _clean_url(value: Any) -> str | None:
     return None
 
 
-def resolve_device_info(values: dict[str, Any], source: str) -> dict[str, str]:
+def resolve_device_info(
+    values: dict[str, Any], source: str
+) -> dict[str, str | None]:
     """Return canonical device info fields for MQTT discovery device block."""
     try:
         if not isinstance(values, dict):
@@ -61,7 +63,7 @@ def resolve_device_info(values: dict[str, Any], source: str) -> dict[str, str]:
         # Keep behavior deterministic by only normalizing known aliases.
         _ = source  # source accepted by contract; mapping is source-agnostic for now.
 
-        resolved: dict[str, str] = {}
+        resolved: dict[str, str | None] = {}
 
         manufacturer = _first(values, ("manufacturer", "mfr", "vendor", "brand"))
         if manufacturer is not None:
@@ -107,5 +109,5 @@ def resolve_device_info(values: dict[str, Any], source: str) -> dict[str, str]:
             for key, value in resolved.items()
             if key in CANONICAL_KEYS and isinstance(value, str) and value.strip()
         }
-    except (AttributeError, TypeError, ValueError):
+    except (AttributeError, KeyError, TypeError, ValueError):
         return {}

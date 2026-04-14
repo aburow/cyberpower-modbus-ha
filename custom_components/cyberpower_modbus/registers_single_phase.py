@@ -120,7 +120,7 @@ REGISTERS = [
         "address": 0x3027,
         "count": 1,
         "type": "uint16",
-        "scale": 10,
+        "scale": 1,
     },
     {
         "key": "battery_capacity",

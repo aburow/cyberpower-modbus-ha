@@ -79,6 +79,7 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._backoff_until: float | None = None
         self._backoff_seconds: float = 0.0
         self._backoff_max_seconds: float = 60.0
+        self._reconnect_count: int = 0
         self._post_connect_delay: float = 0.05
         self._inter_block_delay: float = 0.05
 
@@ -154,13 +155,21 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Fetch data from the UPS via Modbus (block reads with fallback to individual reads)."""
         data: dict[str, Any] = {}
         errors: list[str] = []
+        poll_start = time.monotonic()
+        lock_wait = 0.0
+        connect_elapsed = 0.0
+        block_reads_elapsed = 0.0
+        individual_reads_elapsed = 0.0
+        close_elapsed = 0.0
+        modbus_cycle_elapsed = 0.0
+        reconnects_at_start = self._reconnect_count
 
         now = time.monotonic()
         if self._backoff_until and now < self._backoff_until:
             remaining = self._backoff_until - now
             raise UpdateFailed(f"Backoff active for {remaining:.1f}s")
 
-        _LOGGER.debug("Starting update cycle [%s]", self._device_context)
+        _LOGGER.info("Starting update cycle [%s]", self._device_context)
 
         lock_start = time.monotonic()
         async with self._io_lock:
@@ -168,7 +177,11 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if lock_wait > 0:
                 _LOGGER.debug("Waited %.3fs for Modbus lock [%s]", lock_wait, self._device_context)
 
-            if not await self._connect_client():
+            cycle_start = time.monotonic()
+            connect_start = time.monotonic()
+            connected = await self._connect_client()
+            connect_elapsed = time.monotonic() - connect_start
+            if not connected:
                 self._apply_backoff()
                 raise UpdateFailed("Unable to connect to Modbus device")
 
@@ -178,7 +191,9 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             try:
                 # Try block reads first (optimized) with reconnection logic
                 _LOGGER.debug("Attempting block reads [%s]", self._device_context)
+                block_reads_start = time.monotonic()
                 block_read_ok = await self._try_block_reads(data, errors)
+                block_reads_elapsed = time.monotonic() - block_reads_start
                 _LOGGER.debug(
                     "Block reads result: %s (data keys: %s) [%s]",
                     "success" if block_read_ok else "failed",
@@ -193,7 +208,9 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         self._device_context,
                     )
                     # Don't clear data - preserve any partial data from successful block reads
+                    individual_reads_start = time.monotonic()
                     await self._try_individual_reads(data, errors)
+                    individual_reads_elapsed = time.monotonic() - individual_reads_start
                     _LOGGER.debug(
                         "Individual reads fallback complete (data keys: %s) [%s]",
                         list(data.keys()),
@@ -222,7 +239,28 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._reset_backoff()
                 return data
             finally:
+                close_start = time.monotonic()
                 await self._close_client()
+                close_elapsed = time.monotonic() - close_start
+                modbus_cycle_elapsed = time.monotonic() - cycle_start
+                _LOGGER.info(
+                    "Update cycle complete in %.3fs [%s]",
+                    modbus_cycle_elapsed,
+                    self._device_context,
+                )
+                _LOGGER.info(
+                    "Poll timing breakdown: total=%.3fs, lock_wait=%.3fs, modbus=%.3fs, "
+                    "connect=%.3fs, block_reads=%.3fs, individual_reads=%.3fs, close=%.3fs, reconnects=%d [%s]",
+                    time.monotonic() - poll_start,
+                    lock_wait,
+                    modbus_cycle_elapsed,
+                    connect_elapsed,
+                    block_reads_elapsed,
+                    individual_reads_elapsed,
+                    close_elapsed,
+                    self._reconnect_count - reconnects_at_start,
+                    self._device_context,
+                )
 
     async def _try_block_reads(self, data: dict[str, Any], errors: list[str]) -> bool:
         """Try to read data using block reads. Returns True if any blocks succeed, False if all fail."""
@@ -533,6 +571,7 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _rebuild_and_connect(self) -> bool:
         """Rebuild the Modbus client after socket errors and reconnect."""
+        self._reconnect_count += 1
         await self._close_client()
         self._client = self._client_factory()
         connected = await self._connect_client()

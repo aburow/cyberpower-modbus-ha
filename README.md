@@ -119,6 +119,8 @@ logger:
 ```
 
 Useful debug entries to expect:
+- `Starting update cycle` and `Update cycle complete in ...s`
+- `Poll timing breakdown: total, lock_wait, modbus, connect, block_reads, individual_reads, close, reconnects`
 - `Modbus connect ok/failed in Xms`
 - `Modbus close completed in Xms`
 - `Waited X.XXXs for Modbus lock`

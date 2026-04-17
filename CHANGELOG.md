@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1-dev.7
+- Add info-level coordinator update cycle boundary logs (`Starting update cycle`, `Update cycle complete in ...s`).
+- Add info-level poll timing breakdown logs (`total`, `lock_wait`, `modbus`, `connect`, `block_reads`, `individual_reads`, `close`, `reconnects`) for runtime hotspot isolation.
+- Update README troubleshooting guidance with the new timing instrumentation log lines.
+
 ## 1.1.1-dev.6
 - Add `capability_profile_unified.py` with `contract_version`/`CONTRACT_VERSION` set to `2.0.0` and modbus v2 capability profiles (poll groups + block optimization hints).
 - Align unified interface contracts for bridge runtime loading (`icons_unified.py`, `sensor_availability_unified.py`, `device_info_unified.py`) with never-raise behavior.

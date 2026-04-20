@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1-dev.8
+- Add `sensor_catalog_unified.py` as an import-free, static, exhaustive per-profile sensor catalog for downstream selector/picklist consumers.
+- Preserve existing unified contract/profile exposure semantics by keeping catalog completeness separate from default-enabled/source-key contract curation.
+
 ## 1.1.1-dev.7
 - Add info-level coordinator update cycle boundary logs (`Starting update cycle`, `Update cycle complete in ...s`).
 - Add info-level poll timing breakdown logs (`total`, `lock_wait`, `modbus`, `connect`, `block_reads`, `individual_reads`, `close`, `reconnects`) for runtime hotspot isolation.

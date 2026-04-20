@@ -23,6 +23,7 @@ this purpose.
 - **Pacing delays** for devices that require slower read cadence
 - **Holding register polling** only (input registers are not supported on tested hardware)
 - **Unified icon resolver** shared with related UPS projects for consistent `mdi:` mapping
+- **Unified sensor catalog artifact** (`sensor_catalog_unified.py`) for dependency-free downstream sensor picklists/selectors
 - **Default-enabled minimal core entities** with non-core sensors/binary sensors opt-in via Entity Registry
 - **Set or Reset Monitors button** to bulk-apply default monitoring per configured UPS
 

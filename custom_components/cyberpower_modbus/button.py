@@ -55,6 +55,7 @@ class CyberPowerModbusResetMonitoringButton(CoordinatorEntity, ButtonEntity):
             manufacturer="CyberPower",
             model=coordinator.hw_model or "CyberPower UPS",
             serial_number=coordinator.serial_number,
+            configuration_url=coordinator.configuration_url,
             sw_version=(
                 f"{coordinator.fw_version} ({coordinator.fw_date})"
                 if coordinator.fw_version and coordinator.fw_date

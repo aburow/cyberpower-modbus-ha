@@ -13,3 +13,4 @@ semgrep-*.sarif
 .grain/
 .grain-cache/
 .grain_cache/
+bugs/

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1-dev.10
+- Add Home Assistant device info `configuration_url` using the configured host so the device page links to the UPS web UI.
+- Keep the device URL deterministic as `http://<host>` and omit it only when the configured host is empty.
+
 ## 1.1.1-dev.9
 - Fix single-phase output load scaling so whole-percent Modbus readings are no longer divided by 10.
 - Add CyberPower enterprise SNMP telemetry for single-phase output power (`W`) and output energy (`kWh`) on the normal coordinator poll cycle.

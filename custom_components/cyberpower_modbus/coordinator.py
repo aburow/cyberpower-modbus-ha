@@ -31,6 +31,16 @@ from .snmp_helper import get_snmp_telemetry_sync
 _LOGGER = logging.getLogger(__name__)
 
 
+def _build_configuration_url(host: str) -> str | None:
+    """Return a device web UI URL for the configured host."""
+    host = host.strip()
+    if not host:
+        return None
+    if host.startswith("http://") or host.startswith("https://"):
+        return host
+    return f"http://{host}"
+
+
 class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Coordinator that polls Modbus registers for the UPS."""
 
@@ -61,6 +71,7 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._port = port
         self._entry_id = entry_id
         self._snmp_community = snmp_community
+        self.configuration_url = _build_configuration_url(host)
         self.unit = unit
         self.device_name = device_name
         self._device_context = (

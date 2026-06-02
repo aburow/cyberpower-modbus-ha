@@ -27,6 +27,7 @@ this purpose.
 - **Unified sensor catalog artifact** (`sensor_catalog_unified.py`) for dependency-free downstream sensor picklists/selectors
 - **Default-enabled minimal core entities** with non-core sensors/binary sensors opt-in via Entity Registry
 - **Set or Reset Monitors button** to bulk-apply default monitoring per configured UPS
+- **Device info web link** using the configured host as `http://<host>` in the Home Assistant device page
 
 ## Architecture
 
@@ -79,6 +80,7 @@ flowchart TB
    - **Scan Interval**: Update interval in seconds (default: 10)
 
 Device type (single/three-phase) is detected via SNMP (UPS-MIB input line count). Single-phase output power and accumulated energy are also polled via SNMP when the CyberPower enterprise OIDs are available.
+The Home Assistant device info block also links to the UPS web UI using the configured host.
 
 ## Requirements
 

@@ -10,8 +10,8 @@ import re
 from pathlib import Path
 from typing import Any
 
-contract_version = "2.0.0"
 CONTRACT_VERSION = "2.0.0"
+contract_version = CONTRACT_VERSION
 
 DEFAULT_POLL_GROUPS: dict[str, dict[str, int]] = {
     "fast": {"interval_s": 10},

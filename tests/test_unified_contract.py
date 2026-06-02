@@ -183,3 +183,16 @@ def test_single_phase_output_power_sensor_metadata() -> None:
     assert "UnitOfEnergy.KILO_WATT_HOUR" in source
     assert "SensorDeviceClass.ENERGY" in source
     assert "SensorStateClass.TOTAL_INCREASING" in source
+
+
+def test_runtime_device_info_includes_configuration_url() -> None:
+    coordinator_source = (DOMAIN_PATH / "coordinator.py").read_text()
+    sensor_source = (DOMAIN_PATH / "sensor.py").read_text()
+    binary_sensor_source = (DOMAIN_PATH / "binary_sensor.py").read_text()
+    button_source = (DOMAIN_PATH / "button.py").read_text()
+
+    assert 'def _build_configuration_url(host: str) -> str | None:' in coordinator_source
+    assert 'return f"http://{host}"' in coordinator_source
+    assert "configuration_url=coordinator.configuration_url" in sensor_source
+    assert "configuration_url=coordinator.configuration_url" in binary_sensor_source
+    assert "configuration_url=coordinator.configuration_url" in button_source

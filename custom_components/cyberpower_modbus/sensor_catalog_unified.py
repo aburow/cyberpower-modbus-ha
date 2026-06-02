@@ -140,6 +140,22 @@ ALL_SENSORS_UNIFIED = {
                 "category": "core",
             },
             {
+                "key": "output_power",
+                "label": "Output Power",
+                "source": "snmp",
+                "oid": "1.3.6.1.4.1.3808.1.1.1.4.2.5.0",
+                "unit": "W",
+                "category": "core",
+            },
+            {
+                "key": "output_energy",
+                "label": "Output Energy",
+                "source": "snmp",
+                "oid": "1.3.6.1.4.1.3808.1.1.1.4.2.6.0",
+                "unit": "kWh",
+                "category": "core",
+            },
+            {
                 "key": "battery_state_of_charge",
                 "aliases": ["battery_capacity"],
                 "label": "Battery State of Charge",

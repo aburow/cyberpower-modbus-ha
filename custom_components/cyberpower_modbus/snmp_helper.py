@@ -39,16 +39,35 @@ CYBERPOWER_OID_CARD_MODEL = "1.3.6.1.4.1.3808.1.1.1.1.1.2.0"
 CYBERPOWER_OID_UPS_FIRMWARE = "1.3.6.1.4.1.3808.1.1.1.1.2.1.0"
 CYBERPOWER_OID_SERIAL = "1.3.6.1.4.1.3808.1.1.1.1.2.3.0"
 CYBERPOWER_OID_CARD_FIRMWARE = "1.3.6.1.4.1.3808.1.1.1.1.2.4.0"
+CYBERPOWER_OID_OUTPUT_POWER = "1.3.6.1.4.1.3808.1.1.1.4.2.5.0"
+CYBERPOWER_OID_OUTPUT_ENERGY = "1.3.6.1.4.1.3808.1.1.1.4.2.6.0"
+
+SNMP_TELEMETRY_DESCRIPTORS = (
+    {
+        "key": "output_power",
+        "oid": CYBERPOWER_OID_OUTPUT_POWER,
+        "scale": 1,
+    },
+    {
+        "key": "output_energy",
+        "oid": CYBERPOWER_OID_OUTPUT_ENERGY,
+        "scale": 10,
+    },
+)
 
 
 async def async_get_snmp_value(
-    host: str, oid: str, community: str = "public", timeout: int = 5
+    host: str,
+    oid: str,
+    community: str = "public",
+    timeout: int = 5,
+    retries: int = 3,
 ) -> str | None:
     """Query single SNMP OID and return string value."""
     try:
         _LOGGER.debug("SNMP query to %s OID %s (timeout=%ds)", host, oid, timeout)
 
-        target = await UdpTransportTarget.create((host, 161), timeout=timeout, retries=3)
+        target = await UdpTransportTarget.create((host, 161), timeout=timeout, retries=retries)
 
         error_indication, error_status, error_index, var_binds = await get_cmd(
             SnmpEngine(),
@@ -136,6 +155,46 @@ async def async_get_device_metadata(
     return metadata
 
 
+async def async_get_snmp_telemetry(
+    host: str,
+    community: str = "public",
+) -> dict[str, float | int]:
+    """Query CyberPower SNMP telemetry values used during regular polling."""
+    telemetry: dict[str, float | int] = {}
+
+    results = await asyncio.gather(
+        *(
+            async_get_snmp_value(
+                host,
+                descriptor["oid"],
+                community,
+                timeout=1,
+                retries=1,
+            )
+            for descriptor in SNMP_TELEMETRY_DESCRIPTORS
+        ),
+        return_exceptions=True,
+    )
+
+    for descriptor, result in zip(SNMP_TELEMETRY_DESCRIPTORS, results, strict=True):
+        if isinstance(result, Exception) or result is None:
+            continue
+        try:
+            raw_value = int(result)
+        except ValueError:
+            _LOGGER.debug(
+                "SNMP telemetry value for %s is not numeric: %s",
+                descriptor["key"],
+                result,
+            )
+            continue
+
+        scale = descriptor["scale"]
+        telemetry[descriptor["key"]] = raw_value / scale if scale != 1 else raw_value
+
+    return telemetry
+
+
 def _detect_device_type_from_model(model_string: str | None) -> CyberPowerDeviceType:
     """Infer device type from model string when UPS-MIB line count is unavailable."""
     if not model_string:
@@ -169,6 +228,11 @@ async def async_detect_device_type(
 def get_device_metadata_sync(host: str, community: str = "public") -> dict[str, Any]:
     """Sync wrapper for SNMP metadata (safe to run in executor)."""
     return asyncio.run(async_get_device_metadata(host, community))
+
+
+def get_snmp_telemetry_sync(host: str, community: str = "public") -> dict[str, float | int]:
+    """Sync wrapper for SNMP telemetry (safe to run in executor)."""
+    return asyncio.run(async_get_snmp_telemetry(host, community))
 
 
 def detect_device_type_sync(

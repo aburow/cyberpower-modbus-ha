@@ -74,6 +74,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.entry_id,
         io_lock,
         client_factory,
+        snmp_community,
     )
 
     # Query SNMP for device metadata (async, non-blocking)

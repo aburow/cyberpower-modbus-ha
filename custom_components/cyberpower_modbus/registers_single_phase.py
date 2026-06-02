@@ -7,7 +7,8 @@
 from __future__ import annotations
 
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
-from homeassistant.components.sensor import SensorStateClass
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
+from homeassistant.const import UnitOfEnergy, UnitOfPower
 
 from .const import (
     CyberPowerModbusBinarySensorDescription,
@@ -120,7 +121,7 @@ REGISTERS = [
         "address": 0x3027,
         "count": 1,
         "type": "uint16",
-        "scale": 10,
+        "scale": 1,
     },
     {
         "key": "battery_capacity",
@@ -234,6 +235,22 @@ def get_sensor_descriptions() -> list[CyberPowerModbusSensorDescription]:
             native_unit_of_measurement="%",
             state_class=SensorStateClass.MEASUREMENT,
             register_key="output_load_percent",
+        ),
+        CyberPowerModbusSensorDescription(
+            key="output_power",
+            name="Output Power",
+            native_unit_of_measurement=UnitOfPower.WATT,
+            device_class=SensorDeviceClass.POWER,
+            state_class=SensorStateClass.MEASUREMENT,
+            register_key="output_power",
+        ),
+        CyberPowerModbusSensorDescription(
+            key="output_energy",
+            name="Output Energy",
+            native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+            device_class=SensorDeviceClass.ENERGY,
+            state_class=SensorStateClass.TOTAL_INCREASING,
+            register_key="output_energy",
         ),
         CyberPowerModbusSensorDescription(
             key="battery_capacity",

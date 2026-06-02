@@ -16,6 +16,7 @@ this purpose.
 - **Single-phase UPS support** (tested)
 - **Three-phase UPS support** (experimental/untested)
 - **SNMP metadata**: model, serial, firmware via UPS-MIB and CyberPower enterprise OIDs
+- **SNMP telemetry**: single-phase output power (`W`) and accumulated output energy (`kWh`) via CyberPower enterprise OIDs
 - **Local polling**: Modbus/TCP (port 502) + SNMP (port 161)
 - **Block read optimization** with fallback to individual reads
 - **Per-endpoint Modbus locking** to serialize I/O to the same device
@@ -77,7 +78,7 @@ flowchart TB
    - **Unit ID**: Modbus unit ID (default: 1)
    - **Scan Interval**: Update interval in seconds (default: 10)
 
-Device type (single/three-phase) is detected via SNMP (UPS-MIB input line count).
+Device type (single/three-phase) is detected via SNMP (UPS-MIB input line count). Single-phase output power and accumulated energy are also polled via SNMP when the CyberPower enterprise OIDs are available.
 
 ## Requirements
 
@@ -90,6 +91,7 @@ Device type (single/three-phase) is detected via SNMP (UPS-MIB input line count)
 ## Testing Notes
 
 - Single-phase register mapping is validated against a live CyberPower device.
+- Single-phase SNMP output power and energy telemetry is validated against a live RMCARD205.
 - Three-phase register mapping is included but **untested**; treat as experimental.
 
 ## Development Checks
@@ -101,6 +103,7 @@ Device type (single/three-phase) is detected via SNMP (UPS-MIB input line count)
 ## Troubleshooting
 
 - **SNMP not returning metadata**: verify SNMP is enabled and community is correct.
+- **SNMP power/energy unavailable**: confirm the device exposes CyberPower enterprise OIDs under `1.3.6.1.4.1.3808.1.1.1.4.2`.
 - **Modbus connection errors**: confirm Modbus/TCP is enabled and port 502 is reachable.
 - **Illegal function / input register errors**: the UPS only supports Modbus holding registers (FC03).
 - Useful checks:

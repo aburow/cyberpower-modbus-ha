@@ -14,6 +14,8 @@ STANDARD_ENABLED_CANONICAL_KEYS: tuple[str, ...] = (
     "input_voltage",
     "output_voltage",
     "output_load_percent",
+    "output_power",
+    "output_energy",
     "online_state",
     "on_battery_state",
 )
@@ -26,6 +28,8 @@ SENSOR_CANONICAL_PATTERNS: tuple[tuple[tuple[str, ...], str], ...] = (
     (("input_voltage", "utility_voltage"), "input_voltage"),
     (("output_voltage",), "output_voltage"),
     (("output_load_percent", "load_percent", "output_load"), "output_load_percent"),
+    (("output_power",), "output_power"),
+    (("output_energy",), "output_energy"),
     (("load_on_source",), "online_state"),
 )
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1-dev.9
+- Fix single-phase output load scaling so whole-percent Modbus readings are no longer divided by 10.
+- Add CyberPower enterprise SNMP telemetry for single-phase output power (`W`) and output energy (`kWh`) on the normal coordinator poll cycle.
+- Keep SNMP telemetry best-effort with short per-cycle polling (`timeout=1`, `retries=1`) so SNMP failures do not affect Modbus refresh success.
+- Add Home Assistant-compatible power and energy sensor metadata using current unit enums and sensor device/state classes.
+
 ## 1.1.1-dev.8
 - Add `sensor_catalog_unified.py` as an import-free, static, exhaustive per-profile sensor catalog for downstream selector/picklist consumers.
 - Preserve existing unified contract/profile exposure semantics by keeping catalog completeness separate from default-enabled/source-key contract curation.

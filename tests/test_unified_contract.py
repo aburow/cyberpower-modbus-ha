@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 from pathlib import Path
 
@@ -16,6 +17,17 @@ def _load_module(file_name: str):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def _load_literal_assignment(file_name: str, variable_name: str):
+    source = (DOMAIN_PATH / file_name).read_text()
+    module = ast.parse(source)
+    for node in module.body:
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id == variable_name:
+                    return ast.literal_eval(node.value)
+    raise AssertionError(f"{variable_name} not found in {file_name}")
 
 
 def test_interface_modules_import_in_plain_python() -> None:
@@ -120,3 +132,54 @@ def test_capability_profiles_contract_rules() -> None:
             collisions = modbus_keys & snmp_keys
             unresolved = collisions - set(key_precedence.keys())
             assert not unresolved
+
+
+def test_load_percent_registers_are_unscaled() -> None:
+    single_phase_registers = _load_literal_assignment("registers_single_phase.py", "REGISTERS")
+    three_phase_registers = _load_literal_assignment("registers_three_phase.py", "REGISTERS")
+
+    assert next(
+        register["scale"]
+        for register in single_phase_registers
+        if register["key"] == "output_load_percent"
+    ) == 1
+    assert all(
+        register["scale"] == 10
+        for register in three_phase_registers
+        if register["key"].startswith("load_percent_phase_")
+    )
+
+
+def test_snmp_telemetry_descriptors_are_scoped_and_scaled() -> None:
+    source = (DOMAIN_PATH / "snmp_helper.py").read_text()
+
+    assert '"key": "output_power"' in source
+    assert '"key": "output_energy"' in source
+    assert 'CYBERPOWER_OID_OUTPUT_POWER = "1.3.6.1.4.1.3808.1.1.1.4.2.5.0"' in source
+    assert 'CYBERPOWER_OID_OUTPUT_ENERGY = "1.3.6.1.4.1.3808.1.1.1.4.2.6.0"' in source
+    assert '"scale": 1' in source
+    assert '"scale": 10' in source
+
+
+def test_snmp_telemetry_uses_short_poll_timeout() -> None:
+    source = (DOMAIN_PATH / "snmp_helper.py").read_text()
+
+    assert "timeout=1" in source
+    assert "retries=1" in source
+
+
+def test_output_power_and_energy_are_default_enabled() -> None:
+    availability = _load_module("sensor_availability_unified.py")
+
+    assert availability.is_sensor_enabled_by_default("output_power", "single_phase")
+    assert availability.is_sensor_enabled_by_default("output_energy", "single_phase")
+
+
+def test_single_phase_output_power_sensor_metadata() -> None:
+    source = (DOMAIN_PATH / "registers_single_phase.py").read_text()
+
+    assert "UnitOfPower.WATT" in source
+    assert "SensorDeviceClass.POWER" in source
+    assert "UnitOfEnergy.KILO_WATT_HOUR" in source
+    assert "SensorDeviceClass.ENERGY" in source
+    assert "SensorStateClass.TOTAL_INCREASING" in source

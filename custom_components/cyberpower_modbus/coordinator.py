@@ -26,6 +26,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .const import DOMAIN, SCAN_INTERVAL
 from .device_types import CyberPowerDeviceType
 from . import registers_single_phase
+from .snmp_helper import get_snmp_telemetry_sync
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -44,6 +45,7 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         entry_id: str,
         io_lock: asyncio.Lock,
         client_factory: Callable[[], ModbusTcpClient],
+        snmp_community: str,
     ) -> None:
         """Initialize the coordinator."""
         super().__init__(
@@ -58,6 +60,7 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._host = host
         self._port = port
         self._entry_id = entry_id
+        self._snmp_community = snmp_community
         self.unit = unit
         self.device_name = device_name
         self._device_context = (
@@ -237,7 +240,6 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     self._device_context,
                 )
                 self._reset_backoff()
-                return data
             finally:
                 close_start = time.monotonic()
                 await self._close_client()
@@ -261,6 +263,29 @@ class CyberPowerModbusCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     self._reconnect_count - reconnects_at_start,
                     self._device_context,
                 )
+
+        await self._merge_snmp_telemetry(data)
+        return data
+
+    async def _merge_snmp_telemetry(self, data: dict[str, Any]) -> None:
+        """Merge optional SNMP telemetry without affecting Modbus polling success."""
+        try:
+            telemetry = await self.hass.async_add_executor_job(
+                get_snmp_telemetry_sync,
+                self._host,
+                self._snmp_community,
+            )
+        except (OSError, RuntimeError, ValueError) as err:
+            _LOGGER.debug("SNMP telemetry polling failed: %s [%s]", err, self._device_context)
+            return
+
+        if telemetry:
+            data.update(telemetry)
+            _LOGGER.debug(
+                "SNMP telemetry merged: %s [%s]",
+                ", ".join(sorted(telemetry.keys())),
+                self._device_context,
+            )
 
     async def _try_block_reads(self, data: dict[str, Any], errors: list[str]) -> bool:
         """Try to read data using block reads. Returns True if any blocks succeed, False if all fail."""

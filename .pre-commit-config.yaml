@@ -18,3 +18,4 @@ repos:
         entry: scripts/run-grain.sh
         language: script
         files: \.(py|md)$
+        exclude: ^(\.tools/|\.venv/|node_modules/)

@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.1-dev.10
+## 1.1.1
 - Add Home Assistant device info `configuration_url` using the configured host so the device page links to the UPS web UI.
 - Keep the device URL deterministic as `http://<host>` and omit it only when the configured host is empty.
 

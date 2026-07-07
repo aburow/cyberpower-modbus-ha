@@ -6,6 +6,8 @@
 
 A Home Assistant integration for monitoring CyberPower UPS devices via Modbus/TCP with SNMP-based metadata and device-type detection.
 
+Current stable release: `1.2.0`.
+
 This custom-component does not require additional components such as NUT https://wiki.archlinux.org/title/Network_UPS_Tools
 
 Modbus/TCP is an extremely efficient method for collecting bulk data at a high rate and is used in industrial automation services for

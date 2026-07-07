@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.0] - 2026-07-07
+
+### Fixed
+
+- Normalized the root license text so GitHub Licensee and HACS identify the repository license.
+- Corrected source SPDX identifiers to `AGPL-3.0-or-later`.
+
+### Changed
+
+- Moved project-specific licensing information to the README.
+- Updated authoritative version metadata for the minor release.
+
 ## 1.1.1
 - Add Home Assistant device info `configuration_url` using the configured host so the device page links to the UPS web UI.
 - Keep the device URL deterministic as `http://<host>` and omit it only when the configured host is empty.
